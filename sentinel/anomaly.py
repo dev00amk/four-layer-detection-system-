@@ -4,9 +4,9 @@ import numpy as np
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import MinMaxScaler
 
+from .signals import MAX_FRAUD_SIGNALS
+
 WEIGHTS = {"xgb": 0.45, "iforest": 0.25, "sql": 0.20, "graph": 0.10}
-RING_MULTIPLIER = 1.40
-MAX_SQL_SIGNALS = 25
 
 
 class IsolationForestDetector:
@@ -54,15 +54,30 @@ class IsolationForestDetector:
         return self.scaler.transform(raw.reshape(-1, 1)).ravel().clip(0, 1)
 
 
-def ensemble_score(if_score, xgb_prob, graph_flag, sql_hits):
-    sql_norm = np.clip(np.asarray(sql_hits, dtype=float) / MAX_SQL_SIGNALS, 0, 1)
+def ensemble_score(if_score, xgb_prob, graph_flag, sql_hits, ring_size=0):
+    """
+    Blend the four detection layers into a bounded 0-10 score.
+
+    Ring uplift is proportional to coordination scale: 1.2x for a pair,
+    increasing by 0.1 per member to a 1.5x cap for rings of five or more.
+    SQL input is a raw fraud-signal hit count and is normalized against the
+    22 enforcement signals; monitoring-only controls are excluded upstream.
+    """
+    sql_norm = np.clip(np.asarray(sql_hits, dtype=float) / MAX_FRAUD_SIGNALS, 0, 1)
     raw = (
         WEIGHTS["xgb"] * np.asarray(xgb_prob)
         + WEIGHTS["iforest"] * np.asarray(if_score)
         + WEIGHTS["sql"] * sql_norm
         + WEIGHTS["graph"] * np.asarray(graph_flag)
     )
-    raw *= np.where(np.asarray(graph_flag) > 0, RING_MULTIPLIER, 1.0)
+    graph = np.asarray(graph_flag)
+    size = np.asarray(ring_size)
+    multiplier = np.where(
+        (graph > 0) & (size >= 2),
+        1.0 + 0.1 * np.minimum(size, 5),
+        1.0,
+    )
+    raw *= multiplier
     score = np.rint(np.clip(raw * 10, 0, 10)).astype(int)
     return int(score) if score.ndim == 0 else score
 

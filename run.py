@@ -15,10 +15,10 @@ def main():
     build_graph()
     con = get_connection()
     df = pd.read_parquet(SILVER / "spark_driver_trips.parquet")
-    graph_flags, sql_hits = get_scored_inputs(con, df, GRAPH / "fraud_rings.csv")
+    graph_flags, ring_sizes, sql_hits = get_scored_inputs(con, df, GRAPH / "fraud_rings.csv")
     cross_role_df = get_cross_role_df(con)
     model = SentinelModel().fit(df, df["isFraud"].astype(int))
-    scored = model.predict(df, graph_flags, sql_hits)
+    scored = model.predict(df, graph_flags, ring_sizes, sql_hits)
     shap_df = model.explain(df)
     scored.to_parquet(GOLD / "scored_trips.parquet", index=False)
     scored.head(50_000).to_csv(GOLD / "tableau_export.csv", index=False)
@@ -31,4 +31,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

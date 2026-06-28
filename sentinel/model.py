@@ -92,11 +92,17 @@ class SentinelModel:
         (MODELS / "metrics.json").write_text(json.dumps(self.metrics, indent=2), encoding="utf-8")
         return self
 
-    def predict(self, df, graph_flags, sql_hits):
+    def predict(self, df, graph_flags, ring_sizes, sql_hits):
         X = self._matrix(df)
         xgb_prob = self.xgb.predict_proba(X)[:, 1]
         if_score = self.iforest.predict_score(X)
-        score = ensemble_score(if_score, xgb_prob, np.asarray(graph_flags), np.asarray(sql_hits))
+        score = ensemble_score(
+            if_score,
+            xgb_prob,
+            np.asarray(graph_flags),
+            np.asarray(sql_hits),
+            np.asarray(ring_sizes),
+        )
         return pd.DataFrame(
             {
                 "driver_id": df["driver_id"].values,
@@ -104,6 +110,7 @@ class SentinelModel:
                 "xgb_probability": xgb_prob,
                 "iforest_score": if_score,
                 "graph_flag": np.asarray(graph_flags),
+                "ring_size": np.asarray(ring_sizes),
                 "sql_hits": np.asarray(sql_hits),
                 "score": score,
                 "band": [risk_band_router(int(value)) for value in score],
@@ -135,7 +142,7 @@ def main():
 
     df = pd.read_parquet(SILVER / "spark_driver_trips.parquet")
     con = get_connection()
-    graph_flags, sql_hits = get_scored_inputs(con, df)
+    graph_flags, ring_sizes, sql_hits = get_scored_inputs(con, df)
     model = SentinelModel().fit(df, df["isFraud"].astype(int))
     print(json.dumps(model.metrics, indent=2))
 
