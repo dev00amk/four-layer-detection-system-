@@ -14,14 +14,50 @@ from .anomaly import IsolationForestDetector, ensemble_score, risk_band_router
 from .config import MODELS, ensure_directories
 from .features import BEHAVIORAL_FEATURES, build_behavioral_features
 
+# XGBoost feature matrix: three groups with an explicit production migration path.
+#
+# Group A is the abstract IEEE-CIS benchmark surface. Remove it in production
+# and replace it with real processor transaction features.
+_FEAT_A = [
+    "TransactionAmt",
+    "dist1",
+    "C1",
+    "C2",
+    "C5",
+    "C13",
+    "D1",
+    "D10",
+    "V12",
+    "V53",
+    "V258",
+]
+
+# Group B is delivery telemetry. Retain the semantics in production while
+# replacing deterministic demo values with governed operational telemetry.
+_FEAT_B = [
+    "geofence_dist_m",
+    "emulator_flag",
+    "gps_mock_flag",
+    "rooted_device_flag",
+    "incentive_trip_count",
+    "refund_count_30d",
+    "payout_change_72h",
+    "off_hours_flag",
+    "trip_distance_km",
+    "trip_duration_min",
+]
+
+# Group C is data-source-agnostic behavioral segmentation. Retain the feature
+# logic and recalibrate peer/cohort baselines on representative operational data.
+_FEAT_C = list(BEHAVIORAL_FEATURES)
+
+XGB_FEATURES: list[str] = _FEAT_A + _FEAT_B + _FEAT_C
+
 
 class SentinelModel:
-    XGB_FEATURES = [
-        "TransactionAmt", "dist1", "C1", "C2", "C5", "C13", "D1", "D10", "V12", "V53", "V258",
-        "geofence_dist_m", "emulator_flag", "gps_mock_flag", "rooted_device_flag",
-        "incentive_trip_count", "refund_count_30d", "payout_change_72h", "off_hours_flag",
-        "trip_distance_km", "trip_duration_min",
-    ] + BEHAVIORAL_FEATURES
+    # Production migration: remove A, replace B values, retain C, retrain on
+    # sufficient labeled operational cases, then recalibrate IF contamination.
+    XGB_FEATURES = XGB_FEATURES
 
     def __init__(self, random_state: int = 42):
         self.random_state = random_state
