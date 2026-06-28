@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 WEIGHTS = {"xgb": 0.45, "iforest": 0.25, "sql": 0.20, "graph": 0.10}
 RING_MULTIPLIER = 1.40
-MAX_SQL_SIGNALS = 22
+MAX_SQL_SIGNALS = 25
 
 
 class IsolationForestDetector:
@@ -47,4 +47,3 @@ def risk_band_router(score: int) -> str:
     if score >= 3:
         return "MEDIUM"
     return "LOW"
-

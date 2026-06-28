@@ -45,6 +45,19 @@ def enrich(seed: int = 42) -> pd.DataFrame:
         trip_duration_min=np.maximum(2, rng.normal(np.where(fraud, 42, 24), 10, n)),
         ip_cluster=pd.Series((driver_num * 11 + rng.integers(0, 4, n)) % max(250, n // 25)).map(lambda x: f"IP{x:06d}"),
     )
+    accept_latency_ms = np.maximum(
+        40,
+        rng.normal(np.where(fraud & (df["emulator_flag"].to_numpy() == 1), 280, 4_500), 900, n),
+    ).astype(int)
+    df["trip_start_ts"] = df["event_ts"]
+    df["trip_end_ts"] = df["event_ts"] + pd.to_timedelta(df["trip_duration_min"], unit="m")
+    df["offer_sent_ts"] = df["trip_start_ts"] - pd.to_timedelta(accept_latency_ms, unit="ms")
+    df["accept_ts"] = df["trip_start_ts"]
+    df["pickup_confirm_ts"] = df["trip_start_ts"] + pd.to_timedelta(
+        np.maximum(1, df["trip_duration_min"] * 0.2), unit="m"
+    )
+    df["gps_accuracy_m"] = np.maximum(2, rng.normal(np.where(fraud, 22, 15), 8, n))
+    df["root_flag"] = df["rooted_device_flag"]
     # Seed one small, explainable coordination pattern for the reviewer-facing CASE_001.
     case_drivers = sorted(df["driver_id"].unique())[:2]
     case_mask = df["driver_id"].isin(case_drivers)
@@ -53,6 +66,23 @@ def enrich(seed: int = 42) -> pd.DataFrame:
         "BANK_CASE001",
         "CMP_CASE001",
     ]
+    for case_driver in case_drivers:
+        bot_indices = df.index[df["driver_id"].eq(case_driver)][:5]
+        df.loc[bot_indices, "emulator_flag"] = 1
+        df.loc[bot_indices, "offer_sent_ts"] = (
+            df.loc[bot_indices, "accept_ts"] - pd.to_timedelta(200, unit="ms")
+        )
+    gps_indices = df.index[df["driver_id"].eq(case_drivers[0])][:3]
+    gps_times = pd.Timestamp("2025-02-01T12:00:00") + pd.to_timedelta(
+        np.arange(len(gps_indices)) * 30, unit="s"
+    )
+    df.loc[gps_indices, "trip_start_ts"] = gps_times
+    df.loc[gps_indices, "trip_end_ts"] = gps_times + pd.to_timedelta(10, unit="s")
+    df.loc[gps_indices, "pickup_lat"] = 40.0 + np.arange(len(gps_indices))
+    df.loc[gps_indices, "dropoff_lat"] = 40.0 + np.arange(len(gps_indices))
+    df.loc[gps_indices, ["pickup_lon", "dropoff_lon"]] = -74.0
+    df.loc[gps_indices, "gps_accuracy_m"] = 10.0
+    df.loc[gps_indices, "gps_mock_flag"] = 1
     output = SILVER / "spark_driver_trips.parquet"
     df.to_parquet(output, index=False)
     print(f"Silver written: {output} shape={df.shape} fraud_rate={df.isFraud.mean():.3%} emulator_rate={df.emulator_flag.mean():.3%}")

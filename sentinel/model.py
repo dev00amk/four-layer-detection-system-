@@ -12,6 +12,7 @@ from xgboost import XGBClassifier
 
 from .anomaly import IsolationForestDetector, ensemble_score, risk_band_router
 from .config import MODELS, ensure_directories
+from .features import BEHAVIORAL_FEATURES, build_behavioral_features
 
 
 class SentinelModel:
@@ -20,7 +21,7 @@ class SentinelModel:
         "geofence_dist_m", "emulator_flag", "gps_mock_flag", "rooted_device_flag",
         "incentive_trip_count", "refund_count_30d", "payout_change_72h", "off_hours_flag",
         "trip_distance_km", "trip_duration_min",
-    ]
+    ] + BEHAVIORAL_FEATURES
 
     def __init__(self, random_state: int = 42):
         self.random_state = random_state
@@ -32,7 +33,8 @@ class SentinelModel:
         self.metrics = {}
 
     def _matrix(self, df):
-        return df[self.XGB_FEATURES].replace([np.inf, -np.inf], np.nan).fillna(-999).astype(float)
+        featured = build_behavioral_features(df)
+        return featured[self.XGB_FEATURES].replace([np.inf, -np.inf], np.nan).fillna(-999).astype(float)
 
     def fit(self, df, y):
         X = self._matrix(df)

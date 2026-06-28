@@ -64,8 +64,10 @@ write(
         ),
         nbf.v4.new_code_cell(
             "from sentinel.model import SentinelModel\n"
+            "from sentinel.features import build_behavioral_features\n"
             "from xgboost import XGBClassifier\n"
-            "X=df[SentinelModel.XGB_FEATURES].fillna(-999); y=df.isFraud.astype(int)\n"
+            "featured=build_behavioral_features(df)\n"
+            "X=featured[SentinelModel.XGB_FEATURES].fillna(-999); y=df.isFraud.astype(int)\n"
             "m=XGBClassifier(n_estimators=80,max_depth=4,eval_metric='logloss',random_state=42).fit(X,y)\n"
             "pd.Series(m.feature_importances_,index=X.columns).nlargest(10).sort_values().plot.barh(title='Top 10 model features')"
         ),

@@ -41,7 +41,7 @@ For the full 590,540-row target, accept the [IEEE-CIS competition rules](https:/
 
 | Layer | Purpose | Output |
 |---|---|---|
-| SQL | Explainable, threshold-based controls | 22 named driver signals |
+| SQL | Explainable, threshold-based controls | 25 named driver signals |
 | Isolation Forest | Previously unseen behavior | normalized novelty score |
 | XGBoost | Supervised fraud propensity | calibrated ranking probability |
 | Entity graph | Coordinated multi-account behavior | shared device/bank/IP ring flag |
@@ -50,7 +50,7 @@ The blend weights are 45% XGBoost, 25% anomaly, 20% SQL, and 10% graph. Ring mem
 
 ## Signal library
 
-The 22 version-controlled queries under `sql/signals/` cover GPS spoofing, geofence misses, emulator/rooted devices, shared devices and payouts, refund velocity, incentive gaming, off-hours activity, distance and amount anomalies, store concentration, device hopping, shared IPs, payout changes, and composite risk. Each query is independently executable in DuckDB.
+The 25 version-controlled queries under `sql/signals/` cover GPS spoofing, geofence misses, emulator/rooted devices, shared devices and payouts, refund velocity, incentive gaming, off-hours activity, distance and amount anomalies, store concentration, device hopping, shared IPs, payout changes, bot-assisted batch grabbing, device forensics, and composite risk. Each query is independently executable in DuckDB.
 
 ## Results and honest benchmarking
 
@@ -88,6 +88,9 @@ Run `python scripts/create_notebooks.py` to rebuild notebooks. Generated data/mo
 | Investigator enablement | evidence-filled case files and risk-band routing |
 | BI communication | Tableau-ready CSV, dashboard spec, notebooks |
 | Auditability | immutable bronze output, SHA-256 lineage, versioned rules |
+
+See [Operational risk and defensibility](docs/OPERATIONAL_RISK.md) for the
+human-review model, control ownership, monitoring requirements, and production safeguards.
 
 ## Streaming extension
 
