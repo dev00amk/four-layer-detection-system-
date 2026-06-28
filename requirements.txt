@@ -1,0 +1,15 @@
+pandas>=2.2,<3
+numpy>=1.26,<3
+duckdb>=1.0,<2
+pyarrow>=16,<20
+scikit-learn>=1.5,<2
+xgboost>=2.0,<4
+shap>=0.45,<1
+networkx>=3.3,<4
+matplotlib>=3.9,<4
+seaborn>=0.13,<1
+imbalanced-learn>=0.12,<1
+jupyter>=1.0,<2
+faker>=25,<40
+pytest>=8,<10
+
