@@ -9,6 +9,7 @@ from sentinel.config import GOLD, GRAPH, SILVER
 from sentinel.db import get_connection, get_cross_role_df, get_scored_inputs
 from sentinel.graph import build_graph
 from sentinel.model import SentinelModel
+from sentinel.osint import enrich_critical_drivers
 
 
 def main():
@@ -23,10 +24,12 @@ def main():
     scored.to_parquet(GOLD / "scored_trips.parquet", index=False)
     scored.head(50_000).to_csv(GOLD / "tableau_export.csv", index=False)
     n_cases = generate_cases_from_scores(scored, shap_df, cross_role_df)
+    osint_packages = enrich_critical_drivers(scored, output_dir=GOLD, max_drivers=25)
     print(json.dumps(model.metrics, indent=2))
     print(f"Trips scored:      {len(scored):,}")
     print(f"CRITICAL+ flagged: {scored['band'].str.startswith('CRITICAL').sum():,}")
     print(f"Case files opened: {n_cases}")
+    print(f"OSINT packages:    {len(osint_packages)}")
 
 
 if __name__ == "__main__":

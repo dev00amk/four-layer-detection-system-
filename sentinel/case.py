@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from .config import CASES, ensure_directories
+from .osint import enrich_driver
 
 
 def _evidence_hash(content: str) -> str:
@@ -18,6 +19,7 @@ def generate_cases_from_scores(scored: pd.DataFrame, shap_df: pd.DataFrame, cros
     critical = scored[scored["band"].str.startswith("CRITICAL")].drop_duplicates("driver_id").head(limit)
     collusion = cross_role_df.set_index("driver_id") if not cross_role_df.empty else pd.DataFrame()
     for row in critical.itertuples():
+        osint_package = enrich_driver(driver_id=str(row.driver_id))
         evidence = shap_df[shap_df["row_index"] == row.Index].head(5)
         shap_table = "\n".join(
             f"| {r.feature} | {r.value:.3f} | {r.importance:.4f} |" for r in evidence.itertuples()
@@ -54,14 +56,15 @@ def generate_cases_from_scores(scored: pd.DataFrame, shap_df: pd.DataFrame, cros
 
 No adverse action should occur until an investigator documents these checks.
 
-## Structured external verification
+## Structured OSINT and identity verification
 
-| Check | Source | Status |
-|---|---|---|
-| Device/account ownership relationship | Internal identity records | Pending |
-| Payout beneficiary match | Approved payments system | Pending |
-| Store/campaign operational exception | Operations owner | Pending |
-| Prior appeal or accommodation | Case-management system | Pending |
+**Demo disclosure:** Every OSINT result below is a deterministic simulation.
+No vendor, registry, social-network, or web lookup was performed.
+
+**Overall OSINT risk:** {osint_package.overall_osint_risk}
+**Risk signals:** {osint_package.steps_with_risk_signal} of {osint_package.steps_completed}
+
+{osint_package.to_markdown_table()}
 
 ## Recommended action
 
