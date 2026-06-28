@@ -1,6 +1,17 @@
 # Project Sentinel
 
-An interview-ready, four-layer fraud-detection system for last-mile delivery. Sentinel combines deterministic SQL rules, Isolation Forest novelty detection, gradient-boosted classification, and shared-entity graph analysis to prioritize investigator-ready cases.
+Sentinel converts raw Spark Driver telemetry into prioritised, audit-ready fraud
+cases — catching GPS spoofing rings, bot-assisted offer grabbing, and coordinated
+payout abuse before settlement, while producing evidence packs that hold up to
+legal review and appeal.
+
+Built to the operational standard that a platform-level FTC enforcement action
+makes non-negotiable: every adverse action is traceable from raw event to
+investigator decision, every signal documents its false-positive risk, and every
+CRITICAL-band output generates a case file that can be handed directly to Legal
+without further preparation.
+
+The four detection layers exist to serve that outcome. Architecture details follow.
 
 > This is a portfolio/reference implementation built on the public IEEE-CIS fraud target plus clearly labeled, deterministic synthetic delivery telemetry. It is not a Walmart system and makes no claim to use proprietary Walmart data.
 
@@ -88,9 +99,15 @@ Run `python scripts/create_notebooks.py` to rebuild notebooks. Generated data/mo
 | Investigator enablement | evidence-filled case files and risk-band routing |
 | BI communication | Tableau-ready CSV, dashboard spec, notebooks |
 | Auditability | immutable bronze output, SHA-256 lineage, versioned rules |
+| Business case and ROI | quantified loss model, signal prioritisation, stakeholder briefings, failure modes | docs/ |
 
-See [Operational risk and defensibility](docs/OPERATIONAL_RISK.md) for the
-human-review model, control ownership, monitoring requirements, and production safeguards.
+See [Operational risk and defensibility](docs/OPERATIONAL_RISK.md) ·
+[Business impact](docs/BUSINESS_IMPACT.md) ·
+[Signal prioritisation](docs/SIGNAL_PRIORITIZATION.md) ·
+[Cross-functional briefings](docs/CROSS_FUNCTIONAL_BRIEFING.md) ·
+[Failure mode analysis](docs/FAILURE_MODE_ANALYSIS.md) for the
+human-review model, loss quantification, signal governance, stakeholder
+communication templates, and documented system failure modes.
 
 ## Streaming extension
 

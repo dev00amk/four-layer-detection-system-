@@ -77,3 +77,23 @@ and delivery telemetry in this repository are synthetic and clearly labeled.
 They support architecture demonstration, not claims about any specific company,
 driver population, or expected real-world performance.
 
+## Business impact
+
+For a quantified fraud loss model covering each of the six attack families
+Sentinel detects, see [docs/BUSINESS_IMPACT.md](BUSINESS_IMPACT.md).
+
+The short version: at mid-range loss estimates for a platform of Spark's scale,
+prevented losses exceed platform costs by 2–3× in year one if the annual
+preventable loss pool exceeds $2M. The highest-value intervention is pre-payout
+detection of GPS spoofing and coordinated ring activity. The highest-risk failure
+mode is model drift combined with GPS telemetry degradation occurring simultaneously.
+
+## How this system fails
+
+For a documented analysis of all six identified failure modes — threshold gaming,
+telemetry degradation, model drift, novel pattern gaps, store-level insider threat,
+and legal challenge to adverse action — see [docs/FAILURE_MODE_ANALYSIS.md](FAILURE_MODE_ANALYSIS.md).
+
+Building a fraud detection system without documenting how it fails is operational
+negligence. The failure mode analysis exists so the people running this system
+know exactly what to watch for.
