@@ -1,242 +1,177 @@
 # Failure mode analysis
 
-> Documents how Project Sentinel fails, how fast the failure becomes visible,
-> what it costs when undetected, and how to detect and mitigate each failure mode.
+> How Project Sentinel fails, how fast the failure becomes visible,
+> what it costs, and what to do about it.
 >
-> "Thinks like an adversary to anticipate how people might try to exploit the
-> system next." — Walmart LMD Fraud Prevention JD
-
----
-
-## Why this document exists
-
-A fraud detection system that has never thought about how it fails is a liability,
-not an asset. Adversaries study detection systems and adapt. Infrastructure
-degrades. Models drift. New fraud patterns emerge that no signal covers.
-
-This document is the adversarial perspective on Sentinel — what breaks, when,
-how fast, and what to do about it.
+> "Thinks like an adversary to anticipate how people might try to
+> exploit the system next." — Walmart LMD Fraud Prevention JD
 
 ---
 
 ## Failure mode 1 — Threshold gaming
 
-**What happens:**
-A fraudster discovers (through trial and error, or by studying their own case
-file if appeals are too detailed) that the GPS impossible transit threshold is
-180 kph. They instruct their GPS spoofing tool to simulate transit speeds of
-170 kph — plausible for a highway segment, below the detection threshold.
+**What happens:** A fraudster discovers the GPS impossible transit threshold is
+180 kph. Their spoofing tool is configured to simulate 170 kph — plausible for
+a highway, below the detection threshold. Signal 23 stops firing.
 
-**Detection lag:** Signal 23 stops firing. The ring continues earning.
-If only signal 23 was catching this pattern, detection lag is indefinite.
+**Detection lag:** Indefinite if only signal 23 was catching this pattern.
 
-**Business impact:** Full ring earnings continue. At $500/day per ring:
-$500 × (days until next detection mechanism catches it).
+**Why Sentinel is partially resilient:** The layered architecture means threshold
+gaming on one signal does not evade all layers. XGBoost scores the behavioral
+pattern. The graph flag fires if shared entity infrastructure remains.
 
-**Why Sentinel is partially resilient:**
-The layered architecture means threshold gaming on one signal does not evade
-all layers. XGBoost will still score the behavioral pattern. The graph ring
-flag will still fire if the shared entity infrastructure remains. The adversary
-has to defeat all four layers simultaneously.
-
-**What breaks it completely:**
-If the adversary creates new accounts for each trip (rotating device fingerprints,
-new payout instruments, no referral links), the graph layer has nothing to
-connect. At that point, only XGBoost and Isolation Forest stand.
+**What breaks it completely:** New accounts for every trip, rotating device
+fingerprints and payout instruments, no referral links. At that point, only
+XGBoost and Isolation Forest stand — graph layer has nothing to connect.
 
 **Mitigation:**
-- Never document exact numeric thresholds in public appeal communications
-- Rotate thresholds slightly (±10%) on a quarterly basis so no stable threshold
-  can be reverse-engineered
-- Add velocity-based thresholds that are harder to game (e.g., "5 trips in
-  pattern" rather than "one trip above X kph")
-- Isolation Forest is the most resilient to threshold gaming because its
-  decision boundary is not a single numeric cutoff
+- Never share exact numeric thresholds in appeal communications
+- Rotate thresholds ±10% quarterly — no stable threshold can be reverse-engineered
+- Add velocity-based thresholds that are harder to game than single-event cutoffs
+- Isolation Forest is the most resilient to threshold gaming (no single numeric boundary)
 
 ---
 
 ## Failure mode 2 — GPS telemetry degradation
 
-**What happens:**
-A platform SDK update, carrier change, or device population shift causes
-median GPS accuracy_m to increase from 20m to 80m. The GPS drift suppression
-filter in signals 02 and 23 (accuracy_m ≤ 80) now passes most pings even
-when accuracy is poor. GPS anomaly signals fire more false positives. Analyst
-trust in GPS signals drops. Thresholds get raised informally to reduce noise.
-Actual GPS spoofing goes undetected.
+**What happens:** A platform SDK update increases median GPS accuracy_m from 20m
+to 80m. The accuracy filter in signals 02 and 23 passes most pings even when
+accuracy is poor. False positives rise. Analyst trust drops. Thresholds get
+raised informally. Actual GPS spoofing goes undetected.
 
-**Detection lag:** Days to weeks, depending on how quickly the telemetry
-health dashboard alerts.
+**Detection lag:** Days to weeks, depending on telemetry health monitoring.
 
-**Business impact:** GPS spoofing signals account for ~40% of Sentinel's
-detection yield (signals 01, 02, 03, 23). Degradation here degrades the
-whole system.
+**Business impact:** GPS signals account for ~40% of Sentinel detection yield.
+Degradation here degrades the whole system.
 
-**Early warning indicator:**
-- Median GPS accuracy_m by zone and app version (dashboard metric)
-- Signal 02 and 23 false-positive rate rising above baseline
+**Early warning indicators:**
+- Median GPS accuracy_m rising above 50m by zone and app version
+- Signals 02 and 23 false-positive rate rising above baseline
 - Signal volume spike with no corresponding confirmed fraud increase
 
 **Mitigation:**
 - Telemetry health dashboard (recommended to Engineering in CROSS_FUNCTIONAL_BRIEFING.md)
-- Dynamic accuracy filter: instead of hardcoded 80m, use the rolling 90th
-  percentile of accuracy_m for the driver's zone and device type
-- Shadow mode for threshold changes: never adjust a threshold without running
-  both old and new threshold in parallel for 14 days first
+- Dynamic accuracy filter: use rolling 90th percentile of accuracy_m for the
+  driver's zone and device type — not a hardcoded 80m cutoff
+- Shadow mode for all threshold changes: run old and new threshold in parallel
+  for 14 days before promoting
 
 ---
 
 ## Failure mode 3 — Model drift
 
-**What happens:**
-The XGBoost model was trained on IEEE-CIS data with synthetic Spark Driver
-enrichment. Six months into production, the real driver population's feature
-distributions shift (new incentive structure, new zone coverage, new app version).
-The model's AUC-PR drops from 0.83 to 0.65. It begins scoring legitimate
-high-activity drivers as CRITICAL.
+**What happens:** The XGBoost model was trained on IEEE-CIS data with synthetic
+enrichment. Six months into production, real driver feature distributions shift
+(new incentive structure, new zone coverage, new app version). AUC-PR drops
+from 0.83 to 0.65. Legitimate high-activity drivers begin scoring CRITICAL.
 
-**Detection lag:** Weeks to months if no model monitoring is in place.
-The signal is rising false-positive rates and rising appeal overturn rates.
+**Detection lag:** Weeks to months without model monitoring.
 
 **Business impact:**
-- Direct: analyst review costs increase (more false positives to review)
-- Indirect: legitimate driver harm, potential regulatory exposure if adverse
-  actions are later shown to be ungrounded
-- Trust: internal stakeholders lose confidence in the system and begin ignoring
-  high-score alerts
+- Direct: analyst costs increase from rising false positives
+- Indirect: legitimate driver harm, potential regulatory exposure
+- Trust: stakeholders lose confidence and begin ignoring high-score alerts
 
 **Early warning indicators:**
-- Population Stability Index (PSI) on XGBoost input features — alert if PSI > 0.2
-- Weekly AUC-ROC and AUC-PR on any labeled cases from the prior week
+- Population Stability Index (PSI) on key XGBoost features — alert if PSI > 0.2
 - Appeal overturn rate rising above 12%
-- Signal 21 (appeal overturn by signal) showing XGBoost-driven cases overturning
-  more than SQL-driven cases
+- Signal 21 showing XGBoost-driven cases overturning at higher rate than SQL-driven
 
 **Mitigation:**
-- MLflow tracking (already implemented) enables fast rollback to prior model version
-- Shadow mode retraining: retrain on new data, run in parallel for 30 days,
-  promote only if AUC-PR improves or holds
-- Minimum labeled case threshold: do not retrain on fewer than 200 confirmed
-  fraud cases — small samples produce unstable models
+- MLflow tracking (already implemented) enables fast rollback to prior version
+- Shadow mode retraining: retrain on new data, run parallel for 30 days,
+  promote only if AUC-PR holds or improves
+- Minimum training threshold: do not retrain on fewer than 200 confirmed fraud cases
 
 ---
 
-## Failure mode 4 — New fraud pattern with no signal coverage
+## Failure mode 4 — Novel pattern with no signal coverage
 
-**What happens:**
-A new attack emerges that no existing signal addresses. Example: fraudsters
-discover that Spark Driver pays a per-mile bonus for certain route types.
-They begin taking legitimate trips but manipulating the route (adding unnecessary
-loops) to inflate mileage without GPS spoofing that is fast enough to trigger
-signal 01 or 23.
+**What happens:** Fraudsters discover a route manipulation exploit — taking
+legitimate trips but adding unnecessary loops to inflate mileage beyond what
+GPS spoofing signals catch. No existing signal addresses it.
 
-**Detection lag:** Indefinite — until someone notices anomalous route patterns
-in operational review and writes a new signal.
+**Detection lag:** Indefinite — until operational review surfaces the pattern
+and a new signal is written.
 
-**Business impact:** Depends on how quickly the attack scales. Organised
-operations can scale quickly once a gap is discovered.
-
-**Early warning indicators:**
-- Isolation Forest (Layer 2) is specifically designed to catch this. Novel patterns
-  that no signal covers will still show as anomalies in IF scoring.
-- Unusual spike in high-IF-score, low-SQL-signal-count cases — these are the
-  signals of a new pattern
-- Operational review: analyst reviewing cases should flag patterns they see
-  in the queue that don't match any existing signal
+**Why Sentinel is partially resilient:** Isolation Forest (Layer 2) is specifically
+designed for this. Novel patterns that no SQL signal covers will still register
+as anomalies in IF scoring. High-IF, low-SQL-hits cases are the emerging threat
+queue.
 
 **Mitigation:**
-- Weekly review of high-IF-score, low-SQL-hits cases by a senior analyst
-  (the "emerging threat" queue)
-- Formal new-signal intake process (documented in SIGNAL_PRIORITIZATION.md)
-- Quarterly threat landscape review referencing Incognia, Uber engineering
-  blog, and FTC/CFPB enforcement filings for new attack patterns
+- Weekly senior analyst review of high-IF-score, low-SQL-hits cases
+- Formal new signal intake process from SIGNAL_PRIORITIZATION.md
+- Quarterly threat landscape review (Incognia, Uber engineering blog,
+  FTC/CFPB enforcement filings)
 
 ---
 
-## Failure mode 5 — Insider threat (store-level collusion)
+## Failure mode 5 — Store-level insider collusion
 
-**What happens:**
-A store employee provides advance notice of order availability to a specific
-driver or ring, giving them first-access to high-value offers. This is not
-detectable from driver telemetry alone — the driver accepts offers legitimately,
-delivers legitimately, and shows no GPS anomalies.
+**What happens:** A store employee provides advance notice of order availability
+to a specific driver ring. The drivers accept legitimately, deliver legitimately,
+show no GPS anomalies. Driver-side signals don't fire because the behaviour
+is operationally normal.
 
-**Detection lag:** Potentially indefinite from driver-side signals alone.
+**Detection lag:** Potentially indefinite from driver telemetry alone.
 
-**Business impact:** Preferential offer allocation, disadvantaging legitimate
-drivers. If the colluding driver also manipulates delivery confirmation, there
-is direct delivery fraud exposure.
+**Why Sentinel partially addresses this:** Signal 16 (geofence miss concentrated
+at same store) and cross-role collusion flag can surface the store-level pattern.
+But if inside information is provided without delivery manipulation, neither fires.
 
-**Why Sentinel partially addresses this:**
-Signal 16 (repeated geofence miss concentrated at same store) and the
-cross-role risk join (`collusion_flag`) can surface the store-level pattern.
-But if the store employee is providing inside information without the driver
-manipulating GPS or deliveries, neither signal fires.
-
-**What Sentinel cannot address:**
-Insider threat from the store side requires store-side data (employee login
-events, terminal activity, CCTV metadata) that is not in the Spark Driver
-telemetry surface. This is a data access gap, not a model gap.
+**What Sentinel cannot address:** Store-side insider threat requires store-side
+data (employee login events, terminal activity, CCTV metadata) that is not in
+the Spark Driver telemetry surface. This is a data access gap, not a model gap.
 
 **Mitigation:**
-- Escalation path to Store Operations / LP (Loss Prevention) when signal 16
-  or cross-role collusion flag fires for a specific store_id repeatedly
-- Quarterly store-level fraud review: which stores appear most frequently
-  in fraud cases? Requires coordination with store management, not fraud analytics.
-- This failure mode is documented in the case file escalation matrix under
-  "store-insider affinity" — it routes to Legal for review, not to Fraud Ops alone.
+- When signal 16 or cross-role flag fires repeatedly for one store_id, escalate
+  to Store Operations / Loss Prevention — not just Fraud Ops
+- Quarterly store-level fraud review: which stores appear most frequently in
+  cases? Requires store management coordination.
 
 ---
 
 ## Failure mode 6 — Legal challenge to adverse action
 
-**What happens:**
-A deactivated driver engages legal counsel. Counsel requests the evidence basis
-for the deactivation. The fraud team must produce a case file that:
-(a) documents which data was used,
-(b) shows the data is reliable and unmodified,
-(c) demonstrates false-positive paths were considered,
-(d) shows an appeal pathway was provided.
-
-If any of these is missing, the adverse action is legally vulnerable.
+**What happens:** A deactivated driver engages legal counsel. Counsel requests
+the evidence basis. The fraud team must produce a case file that documents which
+data was used, shows it is reliable and unmodified, demonstrates FP paths were
+evaluated, and shows an appeal pathway was provided. If any element is missing,
+the adverse action is legally vulnerable.
 
 **What Sentinel provides:**
-- Evidence hash on every case file (SHA-256 of generation inputs)
-- Immutable bronze layer with SHA-256 lineage log
-- OSINT matrix showing external verification steps taken
-- FP exclusion log in section 7 of every CRITICAL case file
-- Appeal pathway documented in every case file and in every Care Ops communication
+- SHA-256 evidence hash on every case file
+- Immutable bronze layer with lineage log
+- FP exclusion checklist in section 7 of every CRITICAL case file
+- Appeal pathway documented in every case file and Care Ops communication
 
 **What would break this:**
 - Modifying a case file after generation without logging the change
-- Sharing signal-level threshold details in appeal communications (enables
-  threshold gaming, documented in Failure Mode 1)
-- Adverse action without completing the FP exclusion checklist
+- Sharing signal-level threshold details in appeal communications (enables gaming)
+- Taking adverse action without completing the FP exclusion checklist
 
 **Mitigation:**
-- Case files are hash-stamped at generation — any post-generation modification
-  is detectable
-- Legal review required for all CRITICAL+ cases before final adverse action
-  (not just analyst sign-off)
-- Adverse action checklist: FP exclusion log must be complete before Legal
-  is briefed
+- Case files are hash-stamped at generation — post-generation modifications detectable
+- Legal review required for CRITICAL+ cases before final adverse action
+- FP exclusion log must be complete before Legal is briefed
 
 ---
 
-## Failure mode monitoring dashboard — recommended metrics
+## Failure mode monitoring dashboard
 
-| Metric | Threshold for alert | Owner | Review cadence |
-|--------|-------------------|-------|---------------|
-| GPS accuracy_m (median by zone) | > 60m | Engineering | Daily |
+| Metric | Alert threshold | Owner | Cadence |
+|--------|---------------|-------|---------|
+| GPS accuracy_m median by zone | > 60m | Engineering | Daily |
 | Signal 23 false-positive rate | > 15% | Fraud Analytics | Weekly |
 | XGBoost PSI on key features | > 0.20 | Data Science | Monthly |
-| Appeal overturn rate (all signals) | > 12% | Fraud Operations | Weekly |
-| Appeal overturn rate (XGBoost-driven) | > 18% | Data Science | Weekly |
-| Signal 16 concentration at single store | > 3 cases same store, 30 days | Fraud Ops + LP | Weekly |
-| High-IF / low-SQL emerging pattern queue | > 20 cases unreviewed | Senior Analyst | Weekly |
-| Case file modification log | Any post-generation change | Legal | On occurrence |
+| Appeal overturn rate (all) | > 12% | Fraud Operations | Weekly |
+| Appeal overturn rate (XGB cases) | > 18% | Data Science | Weekly |
+| Signal 16 at single store (30d) | > 3 cases same store | Fraud Ops + LP | Weekly |
+| High-IF / low-SQL queue | > 20 unreviewed | Senior Analyst | Weekly |
+| Case file post-gen modification | Any occurrence | Legal | On event |
 
 ---
 
-*This document should be reviewed after every major incident, quarterly as part
-of signal governance, and whenever a new fraud pattern is confirmed in operations.*
+*Review after every confirmed fraud incident, quarterly as part of signal
+governance, and whenever a new attack pattern is confirmed in operations.*

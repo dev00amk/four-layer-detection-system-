@@ -99,15 +99,15 @@ Run `python scripts/create_notebooks.py` to rebuild notebooks. Generated data/mo
 | Investigator enablement | evidence-filled case files and risk-band routing |
 | BI communication | Tableau-ready CSV, dashboard spec, notebooks |
 | Auditability | immutable bronze output, SHA-256 lineage, versioned rules |
-| Business case and ROI | quantified loss model, signal prioritisation, stakeholder briefings, failure modes | docs/ |
+| Business case and program ownership | quantified loss model, signal triage framework, four-audience stakeholder briefings, failure mode analysis | [docs/](docs/) |
 
 See [Operational risk and defensibility](docs/OPERATIONAL_RISK.md) ·
 [Business impact](docs/BUSINESS_IMPACT.md) ·
 [Signal prioritisation](docs/SIGNAL_PRIORITIZATION.md) ·
 [Cross-functional briefings](docs/CROSS_FUNCTIONAL_BRIEFING.md) ·
-[Failure mode analysis](docs/FAILURE_MODE_ANALYSIS.md) for the
-human-review model, loss quantification, signal governance, stakeholder
-communication templates, and documented system failure modes.
+[Failure mode analysis](docs/FAILURE_MODE_ANALYSIS.md) for loss
+quantification, signal governance, stakeholder communication templates,
+and documented system failure modes.
 
 ## Streaming extension
 

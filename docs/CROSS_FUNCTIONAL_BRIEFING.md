@@ -1,196 +1,146 @@
 # Cross-functional stakeholder briefings
 
-> Four one-page briefings on the same fraud case (CASE_001: coordinated
-> account infrastructure) written for four different audiences.
-> Each briefing uses the same facts but different framing, emphasis,
-> and recommended action — matching what each team needs to act.
+> Four one-page briefings on CASE_001 (coordinated account infrastructure)
+> written for four different audiences. Same facts, different framing.
+> This template demonstrates the JD requirement to present operational
+> insights to Product, Legal, Engineering, and Care Operations.
 
 ---
 
-## How to use this document
-
-The JD requires presenting "operational insights to Product, Legal, Compliance,
-Engineering, and Care Operations to inform tooling improvements and policy updates."
-
-This document is the template for doing that. In a real investigation, the
-analyst would complete the bracketed fields from the actual case data and send
-the appropriate section to each team. The CASE_001 data below is from the
-Sentinel demo run.
-
----
-
-## Briefing A — For: Product and Platform Engineering
+## Briefing A — Product and Platform Engineering
 
 **Subject:** Control gap enabling coordinated account infrastructure — product fix required
 
-**What happened in one sentence:**
-Two driver accounts operated from a single device and payout instrument, harvesting
-an incentive campaign while generating GPS anomalies — and the existing onboarding
-flow allowed this to persist for [N] days before detection.
+**What happened:** Two driver accounts operated from a single device and payout
+instrument, harvesting an incentive campaign while generating GPS anomalies.
+The existing onboarding flow allowed this to persist undetected.
 
-**The control gap:**
-The platform currently has no step-up verification trigger when a payout instrument
-is first linked to a new account. A fraudster can create Account B, link the same
-bank token used by Account A, and begin earning immediately. Detection only occurs
-downstream in fraud analytics.
+**The control gap:** The platform has no step-up verification trigger when a
+payout instrument token is linked to a second account within 30 days. A fraudster
+can create Account B, link the same bank token used by Account A, and begin
+earning immediately. Detection only occurs downstream in fraud analytics — not
+at the point of account creation.
 
-**What the data shows:**
+**Evidence:**
 
 | Signal | Account A (DRV-D000000) | Account B (DRV-D000001) |
 |--------|------------------------|------------------------|
-| Device ID | DEV_CASE001 | DEV_CASE001 (same) |
-| Payout token | BANK_CASE001 | BANK_CASE001 (same) |
-| Active incentive campaign | CMP_CASE001 | CMP_CASE001 (same) |
-| XGBoost fraud score | 1.000 | 1.000 |
+| Device ID | DEV_CASE001 | DEV_CASE001 (identical) |
+| Payout token | BANK_CASE001 | BANK_CASE001 (identical) |
+| Active campaign | CMP_CASE001 | CMP_CASE001 (identical) |
+| XGBoost score | 1.000 | 1.000 |
 
-**Recommended product action:**
-Add a step-up challenge (selfie reverification) when a payout instrument token
-is linked to a second account within 30 days. This closes the gap at onboarding,
-not at post-hoc detection. Estimated engineering effort: [S/M/L]. Estimated
-fraud prevented annually at current ring detection rate: see BUSINESS_IMPACT.md.
+**Recommended product action:** Add a step-up challenge (selfie reverification)
+when a payout instrument token is linked to a second account within 30 days.
+This closes the gap at onboarding — earlier and cheaper than post-hoc detection.
 
-**What we need from you:**
-Confirm whether payout instrument deduplication check exists at onboarding.
-If not, prioritise as P1 product control. If yes, confirm why it did not flag
-this pair.
+**Ask:** Confirm whether payout instrument deduplication exists at onboarding.
+If not, prioritise as P1 platform control.
 
 ---
 
-## Briefing B — For: Legal and Compliance
+## Briefing B — Legal and Compliance
 
 **Subject:** CASE_001 evidence summary — adverse action basis and regulatory positioning
 
-**Case classification:** Coordinated account infrastructure — multi-account
-payout abuse with GPS anomaly indicators
+**Case type:** Coordinated account infrastructure — multi-account payout abuse
+with GPS anomaly indicators
 
 **Adverse action contemplated:** Account suspension (both accounts), payout hold
 pending investigation
 
-**Evidence basis:**
-
-All four detection layers fired independently, providing multi-source corroboration:
+**Multi-layer corroboration:**
 
 1. SQL signals: 12 of 25 rules triggered across GPS, device, and payout domains
-2. Isolation Forest: 0.681 anomaly score (threshold 0.60) — behaviour is novel
-   relative to legitimate driver cohort
-3. XGBoost: 1.000 fraud propensity (threshold 0.50) — highest possible score
-4. Graph: both accounts are members of the same entity cluster (shared device +
-   shared bank + shared campaign)
+2. Isolation Forest: 0.681 anomaly score — behaviour is novel vs legitimate cohort
+3. XGBoost: 1.000 fraud propensity — highest possible score
+4. Graph: both accounts share one device cluster and one bank token
 
-**False-positive paths evaluated and ruled out:**
+**False-positive paths evaluated:**
+- Shared household device: accounts show overlapping active sessions — inconsistent
+  with legitimate household sharing
+- Legitimate joint bank account: instrument token appears on no other account
+  at shared address — not a household pattern
 
-- Shared household device: accounts show overlapping active sessions within
-  [N] hours — inconsistent with legitimate household sharing
-- Legitimate bank account sharing: instrument token appears on no other account
-  with shared address — not a family household pattern
-- Driver misidentification: identity verification status current for both accounts
+**Appeal pathway:** Both accounts receive written notification of adverse action
+category. Appeal window: 14 days. Structured review by senior analyst with full
+case file access.
 
-**Appeal pathway:**
-Both accounts will receive written notification of the adverse action basis
-(category level, not signal-level detail). Appeal window: 14 days. Appeal
-process: structured review by senior analyst with access to full case file.
+**Regulatory positioning:** This adverse action is grounded in Spark Driver Terms
+of Service (account integrity section) and is consistent with obligations for
+documented, appealable adverse actions against independent contractors.
 
-**Regulatory note:**
-This adverse action is grounded in the Spark Driver Terms of Service
-[Section X — account integrity] and is consistent with Walmart's post-FTC
-settlement obligations for documented, appealable adverse actions against
-independent contractors.
+**Evidence retention:** Full case file retained with SHA-256 integrity hash for
+7 years per Walmart records policy.
 
-**Retention:**
-Full case file, evidence hash, and decision record retained for 7 years per
-Walmart records policy. Evidence chain integrity: SHA-256 hash confirmed at
-case generation.
-
-**What we need from you:**
-Confirm whether [collusion flag = 1] triggers a mandatory Legal review before
-account suspension, or whether Senior Analyst sign-off is sufficient.
+**Ask:** Confirm whether collusion_flag = 1 requires mandatory Legal review before
+final suspension, or whether senior analyst sign-off is sufficient.
 
 ---
 
-## Briefing C — For: Engineering and Data Infrastructure
+## Briefing C — Engineering and Data Infrastructure
 
-**Subject:** CASE_001 telemetry findings — three infrastructure signals requiring attention
+**Subject:** CASE_001 telemetry findings — three infrastructure items for review
 
-**Pattern detected:**
-Coordinated account infrastructure operating across two driver accounts. The
-detection succeeded, but three infrastructure observations from this case should
-be reviewed by the engineering team.
+**Observation 1 — GPS telemetry accuracy filter risk:**
+Signal 23 uses an accuracy_m ≤ 80 filter to suppress GPS drift false positives.
+If the platform's GPS telemetry accuracy degrades (SDK update, carrier shift,
+device population change), this filter may become too permissive or too restrictive.
 
-**Observation 1 — GPS telemetry accuracy degradation**
-Signal 23 (GPS impossible transit) required an accuracy_m ≤ 80 filter to
-suppress GPS drift false positives. If the platform's GPS telemetry accuracy
-degrades (device population shifts, location SDK changes), this filter may
-become too permissive or too restrictive. Recommend: add a telemetry health
-dashboard tracking median GPS accuracy_m by zone and app version. Alert if
-median exceeds 60m.
+**Recommended action:** Add a telemetry health metric tracking median GPS accuracy_m
+by zone and app version. Alert if median exceeds 60m.
 
-**Observation 2 — Payout instrument deduplication gap**
-The shared payout token was not flagged at account creation time. Signal 07
-caught it post-hoc. The engineering fix (instrument deduplication at onboarding)
-is lower cost and higher value than the detection approach. See Briefing A.
+**Observation 2 — Payout instrument deduplication gap:**
+The shared payout token was not flagged at account creation. Signal 07 caught it
+post-hoc. An onboarding-level deduplication check is lower cost and higher value
+than retrospective detection.
 
-**Observation 3 — Streaming migration path**
-The current Sentinel implementation uses DuckDB batch. For the three highest-value
-signals (GPS impossible transit, shared device, shared payout), latency matters —
-catching these before payout settlement requires evaluating them within the
-payout window (typically T+24h to T+72h). Recommended streaming migration:
+**Observation 3 — Streaming migration path for three highest-value signals:**
 
 ```
 Signal 23 → Flink CEP: per-driver ring buffer of last 5 trip endpoints,
             evaluate on each TRIP_COMPLETED event
-Signal 05 → Kafka consumer: maintain device→[driver_id] inverted index,
-            alert when cardinality exceeds 3
-Signal 07 → Kafka consumer: maintain instrument_token→[driver_id] set,
-            alert when cardinality exceeds 2
+Signal 05 → Kafka consumer: device→[driver_id] inverted index,
+            alert when cardinality > 3 within 30 days
+Signal 07 → Kafka consumer: instrument_token→[driver_id] set,
+            alert when cardinality > 2 within 180 days
 ```
 
-**What we need from you:**
-1. Confirm current GPS accuracy_m distribution in production
-2. Confirm feasibility of payout instrument deduplication at onboarding
-3. Prioritise streaming migration for signals 23, 05, 07 in roadmap
+These three signals account for the majority of high-value ring detection.
+Streaming them reduces payout-to-detection latency from days to minutes.
+
+**Ask:** (1) Confirm current GPS accuracy_m distribution in production.
+(2) Confirm feasibility of payout instrument deduplication at onboarding.
+(3) Prioritise streaming migration for signals 23, 05, 07 in roadmap.
 
 ---
 
-## Briefing D — For: Care Operations and Driver Support
+## Briefing D — Care Operations and Driver Support
 
-**Subject:** CASE_001 — driver impact, communication guidance, and appeal handling
+**Subject:** CASE_001 — driver communication guidance and appeal handling
 
 **Accounts affected:** DRV-D000000, DRV-D000001
 
-**Action taken:** Payout hold pending investigation. Account access [suspended /
-restricted] pending reverification.
+**Action:** Payout hold pending investigation. Account access restricted pending
+reverification.
 
-**What to tell drivers if they contact support:**
-
-Do not share signal-level details (which specific rule triggered, what GPS
-data was observed). Use the following approved language:
+**Approved language for driver contacts:**
 
 > "Your account has been flagged for a routine security review. Your earnings
 > are being held temporarily while our fraud operations team completes this
-> review. This process typically takes [2–5 business days]. You can submit an
-> appeal at [appeal URL]. If we do not confirm fraud, your account will be
-> reinstated and any held earnings will be released promptly."
+> review. This process typically takes 2–5 business days. You can submit an
+> appeal at [appeal URL]. If we do not confirm a policy violation, your account
+> will be reinstated and any held earnings will be released promptly."
 
-**What NOT to say:**
+**Do not say:**
 - Do not confirm or deny that GPS data was analysed
-- Do not share the composite risk score
+- Do not share the composite risk score or which signals fired
 - Do not indicate whether both accounts are under review simultaneously
 - Do not promise a specific reinstatement timeline until fraud ops confirms
 
-**Appeal handling:**
-If either driver submits an appeal:
-1. Log the appeal in the case management system against CASE_001
-2. Route to the assigned fraud analyst (not Care Ops) for substantive review
-3. Target initial response within 48 hours
-4. If the appeal raises new exculpatory information (e.g., device was shared
-   with an authorised family member), route to senior analyst
+**Appeal routing:** If either driver submits an appeal, log it against CASE_001
+and route to the assigned fraud analyst — not Care Ops — for substantive review.
+Target initial response: 48 hours.
 
-**Driver impact note:**
-Earnings hold on both accounts. Combined estimated held earnings: $[X].
-If investigation confirms fraud, held earnings are subject to clawback per
-Spark Driver Terms. If no fraud confirmed, release immediately with no
-driver penalty.
-
-**What we need from you:**
-Confirm whether Care Ops has access to the appeal intake form and whether
-the routing to fraud analytics is automated or manual.
+**Ask:** Confirm whether Care Ops has automated routing to fraud analytics for
+appeals, or whether this is a manual handoff.
