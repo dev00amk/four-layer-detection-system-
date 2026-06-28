@@ -245,6 +245,11 @@ Generated data and model artifacts are excluded from version control.
 | [`docs/CROSS_FUNCTIONAL_BRIEFING.md`](docs/CROSS_FUNCTIONAL_BRIEFING.md) | 4 stakeholder briefings: Product, Legal, Engineering, Care Operations |
 | [`docs/FAILURE_MODE_ANALYSIS.md`](docs/FAILURE_MODE_ANALYSIS.md) | 6 failure modes with detection lag, early warning indicators, mitigation |
 | [`docs/PLATFORM_EQUIVALENCE.md`](docs/PLATFORM_EQUIVALENCE.md) | Maps Sentinel to NICE Actimize, Pega, Salesforce FSC, Unit21 |
+| [`docs/DETECTION_STRATEGY.md`](docs/DETECTION_STRATEGY.md) | Detection thresholds, evidence standards, false-positive controls, economics, and monitoring |
+| [`docs/FRAUD_TECHNIQUES.md`](docs/FRAUD_TECHNIQUES.md) | Fraud technique library, kill chain, lifecycle mapping, and signal coverage |
+| [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md) | Risk appetite, action standards, appeals, escalation, QA, and model governance |
+| [`docs/INVESTIGATOR_PLAYBOOK.md`](docs/INVESTIGATOR_PLAYBOOK.md) | Eight-step investigation SOP from intake through escalation and case closure |
+| [`docs/DECISION_LOG.md`](docs/DECISION_LOG.md) | Material program decisions, alternatives, tradeoffs, rationale, and monitoring plans |
 
 ---
 
