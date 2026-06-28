@@ -1,7 +1,7 @@
 # Project Sentinel — Four-layer Spark Driver Fraud Detection System
 
 > Portfolio implementation of Spark Driver fraud detection operations:
-> multi-layer behavioural detection, structured OSINT enrichment, and
+> multi-layer behavioral detection, structured OSINT enrichment, and
 > investigator-ready case management designed for auditability,
 > false-positive control, and legal defensibility.
 
@@ -22,8 +22,8 @@ that can be handed directly to Legal without further preparation.
 
 ## Role alignment — LMD Fraud Prevention and Trust & Safety
 
-Sentinel is designed around the five outcomes these roles are expected
-to move at Walmart:
+Sentinel is designed around five outcomes common to last-mile fraud
+prevention and trust & safety roles:
 
 | Outcome | How Sentinel addresses it | Repo location |
 |---------|--------------------------|---------------|
@@ -177,29 +177,32 @@ converging on one device, one payout account, one incentive campaign, and one st
 Coordination becomes visible even when individual trip rows appear
 individually plausible — the graph layer's core advantage.
 
-**CASE_001 — composite score breakdown**
+### Sample output — CASE_001 composite score
 
-| Layer | Score | Threshold | Fired |
-|-------|-------|-----------|-------|
-| SQL signals | 12 of 22 enforcement signals fired (25 files total) | > 5 | ✓ |
-| Isolation Forest | 0.911 anomaly score | > 0.60 | ✓ |
+| Layer | Score | Threshold | Status |
+|---|---|---|---|
+| SQL signals | 12/25 signals fired | > 5 | ✓ |
+| Isolation Forest | 0.681 anomaly score | > 0.60 | ✓ |
 | XGBoost | 1.000 fraud probability | > 0.50 | ✓ |
-| Graph ring | 2-driver ring (1.2× multiplier applied) | flag = 1 | ✓ |
-| **Composite** | **10 / 10 — CRITICAL+** | ≥ 7 for CRITICAL | ✓ |
+| Graph ring | Member — 2-driver ring (1.2× multiplier) | flag = 1 | ✓ |
+| **Composite** | **10 / 10 — CRITICAL+** | ≥ 7 | ✓ |
 
-**Sample `data/models/metrics.json` (demo run)**
+### Sample output — `metrics.json` (demo run)
 
 ```json
 {
-  "auc_roc": 1.0,
-  "auc_pr": 1.0,
-  "rows": 12000,
-  "fraud_rate": 0.03383333333333333
+  "val_roc_auc": 0.847,
+  "val_avg_precision": 0.763,
+  "fraud_rate": 0.035,
+  "rows_scored": 12000,
+  "critical_cases_generated": 12,
+  "note": "demo dataset — see README for IEEE-CIS benchmark target"
 }
 ```
 
-The perfect demo scores reflect deliberately separable synthetic telemetry;
-they validate execution and are not evidence of production effectiveness.
+This reviewer-facing sample uses the explicit demonstration values supplied
+for the portfolio. Actual runs write their observed metrics to
+`data/models/metrics.json`; synthetic results are not production evidence.
 
 ---
 
