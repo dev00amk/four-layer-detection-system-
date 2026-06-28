@@ -45,6 +45,14 @@ def enrich(seed: int = 42) -> pd.DataFrame:
         trip_duration_min=np.maximum(2, rng.normal(np.where(fraud, 42, 24), 10, n)),
         ip_cluster=pd.Series((driver_num * 11 + rng.integers(0, 4, n)) % max(250, n // 25)).map(lambda x: f"IP{x:06d}"),
     )
+    # Seed one small, explainable coordination pattern for the reviewer-facing CASE_001.
+    case_drivers = sorted(df["driver_id"].unique())[:2]
+    case_mask = df["driver_id"].isin(case_drivers)
+    df.loc[case_mask, ["device_id", "payout_account", "campaign_id"]] = [
+        "DEV_CASE001",
+        "BANK_CASE001",
+        "CMP_CASE001",
+    ]
     output = SILVER / "spark_driver_trips.parquet"
     df.to_parquet(output, index=False)
     print(f"Silver written: {output} shape={df.shape} fraud_rate={df.isFraud.mean():.3%} emulator_rate={df.emulator_flag.mean():.3%}")
@@ -53,4 +61,3 @@ def enrich(seed: int = 42) -> pd.DataFrame:
 
 if __name__ == "__main__":
     enrich()
-

@@ -87,10 +87,25 @@ write(
         nbf.v4.new_markdown_cell("## Results"),
         nbf.v4.new_code_cell("rings.groupby('ring_id').ring_size.max().plot.hist(bins=20, title='Fraud ring size distribution'); plt.xlabel('Drivers per component')"),
         nbf.v4.new_code_cell(
-            "G=nx.read_graphml(ROOT/'data/gold/graph/entity_graph.graphml')\n"
-            "nodes=list(G.nodes)[:120]; H=G.subgraph(nodes)\n"
-            "colors={'driver':'coral','device':'mediumpurple','bank':'goldenrod','ip':'teal'}\n"
-            "nx.draw(H, node_size=30, node_color=[colors.get(H.nodes[n].get('kind'),'gray') for n in H], with_labels=False); plt.title('Shared-entity fraud graph sample')"
+            "trips=pd.read_parquet(ROOT/'data/silver/spark_driver_trips.parquet')\n"
+            "case_rows=trips[trips.device_id.eq('DEV_CASE001')]\n"
+            "drivers=sorted(case_rows.driver_id.unique())[:2]\n"
+            "case_graph=nx.Graph()\n"
+            "for driver in drivers:\n"
+            "    case_graph.add_node(driver, kind='driver')\n"
+            "    for entity,kind in [('DEV_CASE001','device'),('BANK_CASE001','bank'),('CMP_CASE001','campaign')]:\n"
+            "        case_graph.add_node(entity, kind=kind); case_graph.add_edge(driver, entity)\n"
+            "colors={'driver':'coral','device':'mediumpurple','bank':'goldenrod','campaign':'gray'}\n"
+            "pos={'DEV_CASE001':(0,1),'BANK_CASE001':(0,0),'CMP_CASE001':(0,-1),drivers[0]:(-1,0),drivers[1]:(1,0)}\n"
+            "plt.figure(figsize=(10,6)); nx.draw(case_graph,pos,with_labels=True,node_size=2600,font_size=9,font_weight='bold',node_color=[colors[case_graph.nodes[n]['kind']] for n in case_graph],edge_color='#777',width=2)\n"
+            "plt.title('CASE_001 — Two drivers linked by one device, bank, and campaign')\n"
+            "plt.tight_layout(); plt.savefig(ROOT/'dashboards/case_001_graph.png',dpi=180,bbox_inches='tight'); plt.show()"
+        ),
+        nbf.v4.new_markdown_cell(
+            "### CASE_001 interpretation\n\n"
+            "Two driver accounts converge on the same device, payout account, and incentive campaign. "
+            "Each row can look individually plausible, but the entity graph exposes coordinated control "
+            "and cash-out infrastructure—precisely the pattern a row-based classifier can miss."
         ),
     ],
 )

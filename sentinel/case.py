@@ -36,7 +36,7 @@ def generate_cases_from_scores(scored: pd.DataFrame, shap_df: pd.DataFrame, cros
 
 ## Top model drivers
 
-| Feature | Observed value | Global importance |
+| Feature | Observed value | SHAP contribution |
 |---|---:|---:|
 {shap_table}
 
@@ -62,4 +62,3 @@ for FTC-sensitive adverse-action review before deactivation.
 """
         (CASES / f"CASE_{row.driver_id}.md").write_text(body, encoding="utf-8")
     return len(critical)
-

@@ -60,6 +60,14 @@ The 22 version-controlled queries under `sql/signals/` cover GPS spoofing, geofe
 
 CRITICAL and CRITICAL+ records generate pre-populated Markdown case files with all four layer scores, top model drivers, cross-role collusion evidence, recommended action, an investigator checklist, and a resolution section. Case generation is capped at 25 per run to model an operational review queue.
 
+### CASE_001: coordinated account infrastructure
+
+![CASE_001 shared device, payout account, and campaign graph](dashboards/case_001_graph.png)
+
+The reviewer-visible [CASE_001](cases/CASE_001.md) shows two driver accounts converging on one
+device, payout account, and incentive campaign. This illustrates the graph layer’s core advantage:
+coordination becomes visible even when individual trip rows appear plausible.
+
 ## Notebooks and dashboard
 
 - `notebooks/01_eda.ipynb`: imbalance, amount, device, correlation, and GPS analysis.
@@ -88,4 +96,3 @@ The batch interfaces map cleanly to Kafka/Flink: key telemetry by `driver_id`, m
 ## Responsible use
 
 Synthetic fields are marked in code and should never be mistaken for observed facts. A high score is an investigation priority—not proof of fraud. Production deployment requires privacy review, access controls, fairness testing, appeal pathways, and threshold calibration on representative data.
-

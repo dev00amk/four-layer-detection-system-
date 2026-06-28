@@ -3,6 +3,7 @@ data/bronze/*
 data/silver/*
 data/gold/*
 data/models/*
+!data/models/metrics.json
 !data/**/.gitkeep
 *.parquet
 *.duckdb
