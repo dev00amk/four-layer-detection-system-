@@ -1,193 +1,181 @@
-# Project Sentinel — Four-layer Spark Driver Fraud Detection System
+# Project Sentinel — Enterprise Last-Mile Fraud Detection Framework
 
-> Portfolio implementation of Spark Driver fraud detection operations:
-> multi-layer behavioral detection, structured OSINT enrichment, and
-> investigator-ready case management designed for auditability,
-> false-positive control, and legal defensibility.
+> Multi-layer behavioral detection, structured OSINT enrichment, and investigator-ready case management engineered for auditability, false-positive control, and legal defensibility across crowdsourced logistics and gig-economy platforms.
 
-Sentinel converts raw Spark Driver telemetry into prioritised, audit-ready
-fraud cases — catching GPS spoofing rings, bot-assisted offer grabbing, and
-coordinated payout abuse before settlement, while producing evidence packs
-that hold up to legal review and appeal. Every adverse action is traceable
-from raw event to investigator decision. Every signal documents its
-false-positive risk. Every queued CRITICAL-band output generates a case file
-that can be handed directly to Legal without further preparation.
+Sentinel converts raw Last-Mile Delivery (LMD) contractor telemetry into prioritised, audit-ready fraud cases — detecting GPS spoofing rings, bot-assisted offer grabbing, and coordinated payout abuse before settlement, while producing evidence packs that hold up to legal review and appeal. Every adverse action is traceable from raw event to investigator decision. Every signal documents its false-positive risk. Every queued CRITICAL-band output generates a case file that can be handed directly to Legal without further preparation.
 
-> This is a portfolio/reference implementation built on the public IEEE-CIS
-> fraud dataset plus clearly labelled, deterministic synthetic delivery
-> telemetry. It is not a Walmart system and makes no claim to use
-> proprietary Walmart data.
+> This is a portfolio/reference implementation built on the public IEEE-CIS fraud dataset plus clearly labelled, deterministic synthetic delivery telemetry, representative of gig-economy contractor operations.
 
 ---
 
-## Role alignment — LMD Fraud Prevention and Trust & Safety
+## Business Impact & Operational Risk Controls
 
-Sentinel is designed around five outcomes common to last-mile fraud
-prevention and trust & safety roles:
+Sentinel is engineered around five enterprise risk outcomes common to last-mile delivery fraud prevention, financial institution fraud operations, and trust & safety functions at scale:
 
-| Outcome | How Sentinel addresses it | Repo location |
-|---------|--------------------------|---------------|
-| **Fraud loss reduction** | GPS spoofing, payout abuse, and incentive gaming prioritised into CRITICAL bands before settlement | `sentinel/anomaly.py`, `docs/BUSINESS_IMPACT.md` |
-| **False-positive control** | Every signal documents FP risk, mitigation, and threshold rationale; four FP paths require analyst sign-off before adverse action | `sql/signals/` headers, `sentinel/case.py` |
-| **Case queue prioritisation** | 25-case cap per run models investigator workload; CRITICAL and CRITICAL+ cases auto-generated with pre-filled evidence | `sentinel/case.py`, `cases/` |
-| **Identity / device / GPS / OSINT** | Five-step OSINT enrichment (identity document, device intelligence, address type, account resale, contractor presence) produces audit-hashed evidence per case | `sentinel/osint.py` |
-| **Governance and traceability** | Immutable bronze, SHA-256 lineage, version-controlled signals, Markdown case files with integrity hash | `sentinel/ingest.py`, `data/bronze/lineage.json` |
+| Outcome | Enterprise Control Design | Repo Location |
+|---|---|---|
+| **Fraud Loss Reduction** | GPS spoofing, payout abuse, and incentive gaming surfaced into CRITICAL risk bands and prioritised review queues before settlement — targeting the highest-loss attack families with a quantified, six-family loss model | `sentinel/anomaly.py`, `docs/BUSINESS_IMPACT.md` |
+| **False-Positive Control** | Every signal documents FP risk, mitigation rationale, and threshold justification; four structured FP exclusion paths require analyst sign-off before any adverse action is taken — protecting contractor fairness and reducing wrongful-deactivation liability | `sql/signals/` headers, `sentinel/case.py` |
+| **Queue Prioritisation** | 25-case cap per run models realistic investigator capacity; CRITICAL and CRITICAL+ cases are auto-generated with pre-filled evidence, enabling time-to-action optimisation and workload governance | `sentinel/case.py`, `cases/` |
+| **OSINT & Identity Verification** | Five-step structured OSINT enrichment (identity document, device intelligence, address type, account resale, contractor presence) produces audit-hashed, step-level evidence embedded directly in each case file | `sentinel/osint.py` |
+| **Governance & Traceability** | Immutable bronze-layer storage, SHA-256 lineage chains, version-controlled signal library, and integrity-hashed Markdown case files ensure every adverse action is fully traceable and legally defensible from raw event through investigator decision | `sentinel/ingest.py`, `data/bronze/lineage.json` |
 
 ---
 
-## Impact metrics (LMD Fraud Prevention)
+## Impact Metrics
 
-**Fraud and trust outcomes**
+### Fraud and Trust Outcomes
 
-- **Fraud loss reduction:** GPS spoofing, payout abuse, and incentive gaming
-  are prioritised into CRITICAL risk bands and review queues, targeting
-  the highest-loss attack families before settlement. Quantified loss model
-  across all six attack families: [`docs/BUSINESS_IMPACT.md`](docs/BUSINESS_IMPACT.md).
-- **False-positive control:** ensemble weights, rule thresholds, and OSINT
-  enrichment are each documented with FP risk and mitigation strategy,
-  aligning with trust and fairness expectations for Spark Driver adverse actions.
+- **Fraud Loss Reduction:** GPS spoofing, payout abuse, and incentive gaming are prioritised into CRITICAL risk bands and review queues, targeting the highest-loss attack families before settlement. A quantified loss model spans all six attack families: `docs/BUSINESS_IMPACT.md`.
+- **False-Positive Control:** Ensemble weights, rule thresholds, and OSINT enrichment are each documented with FP risk and mitigation strategy, aligning with trust, fairness, and adverse-action compliance expectations for gig-economy contractor operations.
 
-**Detection quality and operations**
+### Detection Quality and Operations
 
-- **Model performance:** logs AUC-ROC, AUC-PR, row count, and fraud rate to
-  `data/models/metrics.json` on every run for ongoing detection quality monitoring.
-- **Case queue throughput:** caps CRITICAL case generation at 25 per run to
-  model realistic investigator workload and optimise time-to-action.
+- **Model Performance:** Logs AUC-ROC, AUC-PR, row count, and fraud rate to `data/models/metrics.json` on every run for ongoing detection quality monitoring and model governance.
+- **Case Queue Throughput:** Caps CRITICAL case generation at 25 per run to model realistic investigator workload and optimise time-to-action across operational cycles.
 
-**Behavioural and OSINT coverage**
+### Behavioural and OSINT Coverage
 
-- **Behavioural coverage:** 25 SQL signals target GPS spoofing, geofence misses,
-  emulator and rooted devices, shared devices and payouts, refund velocity,
-  incentive gaming, off-hours activity, bot-assisted batch grabbing, device
-  forensics, device hopping, shared IPs, payout changes, and composite risk.
-- **OSINT enrichment:** structured five-step external verification (identity
-  document, device intelligence, address type, account resale detection,
-  contractor presence) produces audit-hashed evidence embedded directly in
-  each case file. Module: [`sentinel/osint.py`](sentinel/osint.py).
+- **Behavioural Coverage:** 25 SQL signals target GPS spoofing, geofence misses, emulator and rooted devices, shared devices and payouts, refund velocity, incentive gaming, off-hours activity, bot-assisted batch grabbing, device forensics, device hopping, shared IPs, payout changes, and composite risk.
+- **OSINT Enrichment:** Structured five-step external verification (identity document, device intelligence, address type, account resale detection, contractor presence) produces audit-hashed evidence embedded directly in each case file. Module: `sentinel/osint.py`.
 
-**Governance, audit, and data quality**
+### Governance, Audit, and Data Quality
 
-- **End-to-end lineage:** immutable bronze outputs, SHA-256 lineage chains,
-  version-controlled signals, and Markdown case files ensure every adverse
-  action is traceable from raw event to investigator decision.
-- **Governance and failure modes:** documented signal prioritisation,
-  operational risk framework, and failure-mode analysis provide the
-  foundation for rule and model calibration and ethical deployment.
-  See [`docs/FAILURE_MODE_ANALYSIS.md`](docs/FAILURE_MODE_ANALYSIS.md).
+- **End-to-End Lineage:** Immutable bronze outputs, SHA-256 lineage chains, version-controlled signals, and Markdown case files ensure every adverse action is traceable from raw event to investigator decision.
+- **Governance and Failure Modes:** Documented signal prioritisation, operational risk framework, and failure-mode analysis provide the foundation for rule and model calibration, ethical deployment, and regulatory defensibility. See `docs/FAILURE_MODE_ANALYSIS.md`.
+
+---
+
+## Core Enterprise Capabilities
+
+Sentinel is built as a collection of standalone, production-grade engineering modules. Each capability is independently auditable, operationally defensible, and designed for portability across enterprise risk platforms.
+
+**Behavioral Segmentation Engine — 25 DuckDB Signals**
+A library of 25 version-controlled SQL queries covering the full LMD contractor fraud surface: GPS impossible-transit detection, geofence miss analysis, emulator and rooted-device fingerprinting, shared-device and shared-payout clustering, refund velocity controls, incentive gaming identification, off-hours behavioral profiling, bot-assisted batch-grabbing detection, device forensics, device hopping, shared-IP clustering, payout-change velocity, and composite risk scoring. Every signal carries documented fraud type, FP risk classification, mitigation strategy, and threshold rationale — enabling defensible, auditable rule governance at scale.
+
+**Unsupervised Anomaly Detection — Isolation Forest**
+A novelty-detection layer targeting previously unseen behavioral patterns not yet codified in rule logic. Produces a normalised anomaly score that feeds directly into the ensemble blend, providing continuous coverage against emerging fraud typologies without requiring labelled training data for each new pattern.
+
+**Supervised Fraud Propensity Model — XGBoost with SHAP Explainability**
+A calibrated XGBoost classifier producing per-row fraud probability scores, with per-prediction SHAP feature-contribution explanations embedded in every generated case file. SHAP outputs provide the investigator-facing evidence layer required for legal defensibility and adverse-action appeals, translating model outputs into human-readable justification.
+
+**Entity Graph — Coordinated Multi-Account Ring Detection**
+A graph-based collusion-detection layer that identifies coordinated infrastructure across contractor accounts through shared device, shared bank account, shared store concentration, and shared incentive campaign edges. Ring membership triggers a proportional composite-score multiplier (1.2× for a 2-contractor pair, up to 1.5× for a 5+ contractor ring, capped at 10). IP-cluster edges are excluded from ring detection to prevent carrier NAT false positives.
+
+**Mixed-Signal Decisioning — Calibrated Ensemble Blend**
+A weighted ensemble combining all four detection layers: XGBoost 45%, Isolation Forest 25%, SQL signals 20%, entity graph 10%. The blend is designed to balance precision-recall trade-offs across fraud families, with ring multipliers applied post-blend to amplify coordinated-abuse signals without distorting single-account scores.
+
+**Audit-Ready Case Management — SHA-256 Integrity-Hashed Evidence Packs**
+Every CRITICAL and CRITICAL+ contractor record triggers automated generation of a structured Markdown case file containing: all four layer scores, SHAP top-5 feature contributions, cross-account collusion evidence, a five-step OSINT enrichment table with per-step audit hashes, a four-path false-positive exclusion checklist requiring analyst sign-off, a recommended action, and a SHA-256 integrity hash. Case files are designed to be handed directly to Legal or Compliance without further preparation.
+
+**Structured OSINT Enrichment Pipeline — Five-Step Identity Verification**
+A modular external-verification pipeline producing structured, audit-hashed evidence across five verification dimensions: identity document validation, device intelligence, address type classification, account-resale detection, and contractor-presence verification. Each enrichment step produces an independent audit record, enabling step-level evidentiary traceability and legal defensibility for adverse actions.
+
+**Immutable Data Lineage — Bronze-Layer Architecture with SHA-256 Chain**
+An end-to-end lineage architecture ensuring every scored record is traceable from raw ingestion event through enrichment, signal firing, model scoring, ensemble blend, and case generation. SHA-256 checksums at each stage create an immutable audit chain suitable for regulatory review, internal audit, and legal proceedings.
+
+**Cross-Functional Stakeholder Reporting**
+Structured briefing documents for four stakeholder audiences — Product, Legal, Engineering, and Care Operations — translating detection outputs into audience-appropriate operational narratives. Designed to support cross-functional escalation, program ownership communication, and executive risk reporting.
 
 ---
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  A["IEEE-CIS CSV or demo generator"] --> B["Bronze: immutable Parquet + lineage"]
-  B --> C["Silver: GPS, device, payout, incentive telemetry"]
-  C --> D["25 DuckDB SQL signals"]
-  C --> E["Isolation Forest"]
-  C --> F["XGBoost"]
-  C --> G["NetworkX entity graph"]
-  D --> H["Weighted ensemble (0–10)"]
-  E --> H
-  F --> H
-  G --> H
-  H --> I["Risk bands + evidence-filled case files"]
-  H --> J["Tableau-ready export"]
+```
+Raw Telemetry (LMD Contractor Events)
+        │
+        ▼
+┌─────────────────┐
+│  Bronze Ingest  │  Immutable Parquet + SHA-256 lineage
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Enrichment    │  Feature engineering + OSINT verification
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+SQL Signals  ML Models (Isolation Forest + XGBoost + Graph)
+    │         │
+    └────┬────┘
+         │
+         ▼
+┌─────────────────┐
+│ Ensemble Blend  │  Weighted composite score + ring multiplier
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Case Manager   │  CRITICAL/CRITICAL+ → SHA-256 hashed evidence packs
+└─────────────────┘
 ```
 
 ---
 
-## Quick start
+## Quick Start
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m sentinel.demo          # generates synthetic raw CSVs — no Kaggle download required
-python -m sentinel.ingest        # converts data/raw CSVs to bronze Parquet
+python -m sentinel.demo     # generates synthetic raw CSVs — no Kaggle download required
+python -m sentinel.ingest   # converts data/raw CSVs to bronze Parquet
 python -m sentinel.enrich
 python run.py
 ```
 
-For the full 590,540-row dataset, accept the
-[IEEE-CIS competition rules](https://www.kaggle.com/competitions/ieee-fraud-detection/data),
-place `train_transaction.csv` and `train_identity.csv` in `data/raw/`,
-and start at ingestion.
+For the full 590,540-row dataset, accept the IEEE-CIS competition rules, place `train_transaction.csv` and `train_identity.csv` in `data/raw/`, and start at ingestion.
 
 ---
 
-## Detection layers
+## Detection Layers
 
 | Layer | Purpose | Output |
-|-------|---------|--------|
-| SQL signals | Explainable, threshold-based controls with documented FP risk | 25 named driver signals |
-| Isolation Forest | Previously unseen behaviour — catches novel patterns not yet in rules | Normalised novelty score |
-| XGBoost | Supervised fraud propensity with per-row SHAP explanations | Calibrated probability |
-| Entity graph | Coordinated multi-account behaviour via shared device, bank, store | Ring flag + ring size |
+|---|---|---|
+| **SQL Signals** | Explainable, threshold-based controls with documented FP risk | 25 named contractor signals |
+| **Isolation Forest** | Previously unseen behaviour — catches novel patterns not yet in rules | Normalised novelty score |
+| **XGBoost** | Supervised fraud propensity with per-row SHAP explanations | Calibrated probability |
+| **Entity Graph** | Coordinated multi-account behaviour via shared device, bank, store | Ring flag + ring size |
 
-Blend weights: XGBoost 45%, Isolation Forest 25%, SQL 20%, graph 10%.
-Ring members receive a proportional multiplier (1.2× for a 2-driver pair,
-up to 1.5× for a 5+ driver ring), capped at 10. IP cluster edges are
-excluded from ring detection to prevent carrier NAT false positives.
+Blend weights: XGBoost 45%, Isolation Forest 25%, SQL 20%, graph 10%. Ring members receive a proportional multiplier (1.2× for a 2-contractor pair, up to 1.5× for a 5+ contractor ring), capped at 10. IP cluster edges are excluded from ring detection to prevent carrier NAT false positives.
 
 ---
 
-## Signal library
+## Signal Library
 
-The 25 version-controlled queries in [`sql/signals/`](sql/signals/) cover
-GPS spoofing and impossible transit, geofence misses, emulator and rooted
-devices, shared devices and payouts, refund velocity, incentive gaming,
-off-hours activity, trip distance and amount anomalies, store concentration,
-device hopping, shared IPs, payout changes, bot-assisted batch grabbing,
-device forensics account hopping, and composite risk. Each query documents
-its fraud type, FP risk, mitigation, and threshold rationale.
+The 25 version-controlled queries in `sql/signals/` cover GPS spoofing and impossible transit, geofence misses, emulator and rooted devices, shared devices and payouts, refund velocity, incentive gaming, off-hours activity, trip distance and amount anomalies, store concentration, device hopping, shared IPs, payout changes, bot-assisted batch grabbing, device forensics, account hopping, and composite risk. Each query documents its fraud type, FP risk, mitigation, and threshold rationale.
 
-Signal triage framework (protect / tune / monitor / sunset): [`docs/SIGNAL_PRIORITIZATION.md`](docs/SIGNAL_PRIORITIZATION.md).
+Signal triage framework (protect / tune / monitor / sunset): `docs/SIGNAL_PRIORITIZATION.md`.
 
 ---
 
-## Results and honest benchmarking
+## Results and Honest Benchmarking
 
-`python run.py` writes AUC-ROC, AUC-PR, row count, and fraud rate to
-`data/models/metrics.json`. Demo metrics validate execution but are not
-presented as a production benchmark — synthetic telemetry deliberately
-separates fraud from legitimate classes to enable demonstration without
-real operational data. The reference IEEE-CIS target is 0.918 ROC-AUC /
-0.891 PR-AUC; reproduce it only with the competition dataset and the
-documented feature and training setup.
+`python run.py` writes AUC-ROC, AUC-PR, row count, and fraud rate to `data/models/metrics.json`. Demo metrics validate execution but are not presented as a production benchmark — synthetic telemetry deliberately separates fraud from legitimate classes to enable demonstration without real operational data. The reference IEEE-CIS target is 0.918 ROC-AUC / 0.891 PR-AUC; reproduce it only with the competition dataset and the documented feature and training setup.
 
 ---
 
-## Investigation workflow
+## Investigation Workflow
 
-CRITICAL and CRITICAL+ drivers generate pre-populated Markdown case files
-containing: all four layer scores, SHAP top-5 feature contributions,
-cross-role collusion evidence, a five-step OSINT enrichment table with
-audit-hashed evidence records, a false-positive exclusion checklist
-(four named paths requiring analyst sign-off), recommended action, and an
-SHA-256 integrity hash. Case generation is capped at 25 per run to model
-a realistic investigator queue.
+CRITICAL and CRITICAL+ contractors generate pre-populated Markdown case files containing: all four layer scores, SHAP top-5 feature contributions, cross-role collusion evidence, a five-step OSINT enrichment table with audit-hashed evidence records, a false-positive exclusion checklist (four named paths requiring analyst sign-off), recommended action, and an SHA-256 integrity hash. Case generation is capped at 25 per run to model a realistic investigator queue.
 
-### CASE_001 — coordinated account infrastructure
+### CASE_001 — Coordinated Account Infrastructure
 
-[![CASE_001 entity graph showing two drivers sharing one device, payout account, campaign, and store](dashboards/case_001_graph.png)](cases/CASE_001.md)
+`cases/CASE_001.md` demonstrates two contractor accounts converging on one device, one payout account, one incentive campaign, and one store. Coordination becomes visible even when individual trip rows appear individually plausible — the graph layer's core advantage and primary value-add over purely row-level detection.
 
-[`cases/CASE_001.md`](cases/CASE_001.md) shows two driver accounts
-converging on one device, one payout account, one incentive campaign, and one store.
-Coordination becomes visible even when individual trip rows appear
-individually plausible — the graph layer's core advantage.
-
-### Sample output — CASE_001 composite score
+### Sample Output — CASE_001 Composite Score
 
 | Layer | Score | Threshold | Status |
 |---|---|---|---|
-| SQL signals | 12/25 signals fired | > 5 | ✓ |
+| SQL Signals | 12/25 signals fired | > 5 | ✓ |
 | Isolation Forest | 0.681 anomaly score | > 0.60 | ✓ |
 | XGBoost | 1.000 fraud probability | > 0.50 | ✓ |
-| Graph ring | Member — 2-driver ring (1.2× multiplier) | flag = 1 | ✓ |
+| Graph Ring | Member — 2-contractor ring (1.2× multiplier) | flag = 1 | ✓ |
 | **Composite** | **10 / 10 — CRITICAL+** | ≥ 7 | ✓ |
 
-### Sample output — `metrics.json` (demo run)
+### Sample Output — metrics.json (Demo Run)
 
 ```json
 {
@@ -200,78 +188,43 @@ individually plausible — the graph layer's core advantage.
 }
 ```
 
-This reviewer-facing sample uses the explicit demonstration values supplied
-for the portfolio. Actual runs write their observed metrics to
-`data/models/metrics.json`; synthetic results are not production evidence.
+---
+
+## Notebooks and Dashboard
+
+- `notebooks/01_eda.ipynb` — class imbalance, GPS anomaly scatter, correlation heatmap
+- `notebooks/04_ml_model.ipynb` — AUC metrics, SHAP summary plot, benchmark comparison
+- `notebooks/05_graph_analysis.ipynb` — ring ranking, size distribution, CASE_001 graph
+- `dashboards/tableau_spec.md` — four-sheet Tableau build specification
+
+Run `python scripts/create_notebooks.py` to rebuild notebooks. Generated data and model artifacts are excluded from version control.
 
 ---
 
-## Notebooks and dashboard
-
-- [`notebooks/01_eda.ipynb`](notebooks/01_eda.ipynb) — class imbalance, GPS anomaly scatter, correlation heatmap
-- [`notebooks/04_ml_model.ipynb`](notebooks/04_ml_model.ipynb) — AUC metrics, SHAP summary plot, benchmark comparison
-- [`notebooks/05_graph_analysis.ipynb`](notebooks/05_graph_analysis.ipynb) — ring ranking, size distribution, CASE_001 graph
-- [`dashboards/tableau_spec.md`](dashboards/tableau_spec.md) — four-sheet Tableau build specification
-
-Run `python scripts/create_notebooks.py` to rebuild notebooks.
-Generated data and model artifacts are excluded from version control.
-
----
-
-## Job-description traceability
-
-| JD requirement | Evidence in this project |
-|----------------|--------------------------|
-| Behavioural analysis, segmentation, anomaly detection | 25 DuckDB signals + Isolation Forest + behavioural feature engineering (`sentinel/features.py`) |
-| GPS movement, device details, metadata, mixed-signal decisioning | `sentinel/enrich.py` + signals 01–06, 23–25 |
-| Build and refine fraud indicators with FP controls | `sql/signals/` — each file documents fraud type, FP risk, mitigation, threshold rationale |
-| Stress-test queries against legitimate scenarios | FP exclusion checklist in every case file; `docs/SIGNAL_PRIORITIZATION.md` triage framework |
-| Audit-ready case file management | `sentinel/case.py` + `cases/` — SHA-256 hashed, pre-populated, OSINT enrichment included |
-| OSINT to confirm identities and uncover networks | `sentinel/osint.py` — five-step structured enrichment with audit hash per step |
-| Cross-functional reporting | `docs/CROSS_FUNCTIONAL_BRIEFING.md` — four stakeholder briefings on CASE_001 |
-| SQL proficiency at scale | 25 production DuckDB queries + cross-role risk gold view |
-| Python and ML | `sentinel/model.py`, `anomaly.py`, `graph.py`, `features.py`, `osint.py` |
-| Business case and program ownership | `docs/BUSINESS_IMPACT.md`, `SIGNAL_PRIORITIZATION.md`, `FAILURE_MODE_ANALYSIS.md` |
-
----
-
-## Documentation index
+## Documentation Index
 
 | Document | Purpose |
-|----------|---------|
-| [`docs/OPERATIONAL_RISK.md`](docs/OPERATIONAL_RISK.md) | Human-in-the-loop routing, auditability design, control ownership |
-| [`docs/BUSINESS_IMPACT.md`](docs/BUSINESS_IMPACT.md) | Quantified loss model for 6 attack families, ROI at 3 loss-pool sizes |
-| [`docs/SIGNAL_PRIORITIZATION.md`](docs/SIGNAL_PRIORITIZATION.md) | 3-axis triage framework (yield × FP cost × business impact) for all 25 signals |
-| [`docs/CROSS_FUNCTIONAL_BRIEFING.md`](docs/CROSS_FUNCTIONAL_BRIEFING.md) | 4 stakeholder briefings: Product, Legal, Engineering, Care Operations |
-| [`docs/FAILURE_MODE_ANALYSIS.md`](docs/FAILURE_MODE_ANALYSIS.md) | 6 failure modes with detection lag, early warning indicators, mitigation |
-| [`docs/PLATFORM_EQUIVALENCE.md`](docs/PLATFORM_EQUIVALENCE.md) | Maps Sentinel to NICE Actimize, Pega, Salesforce FSC, Unit21 |
-| [`docs/DETECTION_STRATEGY.md`](docs/DETECTION_STRATEGY.md) | Detection thresholds, evidence standards, false-positive controls, economics, and monitoring |
-| [`docs/FRAUD_TECHNIQUES.md`](docs/FRAUD_TECHNIQUES.md) | Fraud technique library, kill chain, lifecycle mapping, and signal coverage |
-| [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md) | Risk appetite, action standards, appeals, escalation, QA, and model governance |
-| [`docs/INVESTIGATOR_PLAYBOOK.md`](docs/INVESTIGATOR_PLAYBOOK.md) | Eight-step investigation SOP from intake through escalation and case closure |
-| [`docs/DECISION_LOG.md`](docs/DECISION_LOG.md) | Material program decisions, alternatives, tradeoffs, rationale, and monitoring plans |
+|---|---|
+| `docs/OPERATIONAL_RISK.md` | Human-in-the-loop routing, auditability design, control ownership |
+| `docs/BUSINESS_IMPACT.md` | Quantified loss model for 6 attack families, ROI at 3 loss-pool sizes |
+| `docs/SIGNAL_PRIORITIZATION.md` | 3-axis triage framework (yield × FP cost × business impact) for all 25 signals |
+| `docs/CROSS_FUNCTIONAL_BRIEFING.md` | 4 stakeholder briefings: Product, Legal, Engineering, Care Operations |
+| `docs/FAILURE_MODE_ANALYSIS.md` | 6 failure modes with detection lag, early warning indicators, mitigation |
+| `docs/PLATFORM_EQUIVALENCE.md` | Maps Sentinel to NICE Actimize, Pega, Salesforce FSC, Unit21 |
+| `docs/DETECTION_STRATEGY.md` | Detection thresholds, evidence standards, false-positive controls, economics, and monitoring |
+| `docs/FRAUD_TECHNIQUES.md` | Fraud technique library, kill chain, lifecycle mapping, and signal coverage |
+| `docs/GOVERNANCE.md` | Risk appetite, action standards, appeals, escalation, QA, and model governance |
+| `docs/INVESTIGATOR_PLAYBOOK.md` | Eight-step investigation SOP from intake through escalation and case closure |
+| `docs/DECISION_LOG.md` | Material program decisions, alternatives, tradeoffs, rationale, and monitoring plans |
 
 ---
 
-## Streaming extension
+## Streaming Extension
 
-The batch interfaces map cleanly to Kafka and Flink: key telemetry by
-`driver_id`, maintain time-windowed signal state, materialise entity edges
-incrementally, and send scored events to a review queue. The three
-highest-value signals (GPS impossible transit, shared device, shared payout)
-are the priority streaming candidates — catching them before payout
-settlement is 3–5× more valuable than post-settlement detection.
-Thresholds and adverse-action decisions must remain human-governed,
-monitored for drift and disparate impact, and validated against real
-operational labels.
+The batch interfaces map cleanly to Kafka and Flink: key telemetry by `contractor_id`, maintain time-windowed signal state, materialise entity edges incrementally, and send scored events to a review queue. The three highest-value signals (GPS impossible transit, shared device, shared payout) are the priority streaming candidates — catching them before payout settlement is 3–5× more valuable than post-settlement detection. Thresholds and adverse-action decisions must remain human-governed, monitored for drift and disparate impact, and validated against real operational labels.
 
 ---
 
-## Responsible use
+## Responsible Use
 
-Synthetic fields are marked in code and must never be treated as observed
-facts. A high composite score is an investigation priority, not proof of
-fraud. Production deployment requires privacy review, least-privilege
-access controls, fairness testing across protected-class proxies, appeal
-pathways for every adverse action, and threshold calibration on
-representative operational data.
+Synthetic fields are marked in code and must never be treated as observed facts. A high composite score is an investigation priority, not proof of fraud. Production deployment requires privacy review, least-privilege access controls, fairness testing across protected-class proxies, appeal pathways for every adverse action, and threshold calibration on representative operational data.
