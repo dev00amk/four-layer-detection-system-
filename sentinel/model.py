@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -78,7 +79,7 @@ class SentinelModel:
         featured = build_behavioral_features(df)
         return featured[self.XGB_FEATURES].replace([np.inf, -np.inf], np.nan).fillna(-999).astype(float)
 
-    def fit(self, df, y):
+    def fit(self, df, y, metrics_path: Path | None = None):
         X = self._matrix(df)
         train_idx, test_idx = train_test_split(
             np.arange(len(X)), test_size=0.25, stratify=y, random_state=self.random_state
@@ -94,8 +95,11 @@ class SentinelModel:
             "rows": int(len(df)),
             "fraud_rate": float(y.mean()),
         }
-        ensure_directories()
-        (MODELS / "metrics.json").write_text(json.dumps(self.metrics, indent=2), encoding="utf-8")
+        target = metrics_path or (MODELS / "metrics.json")
+        if metrics_path is None:
+            ensure_directories()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(self.metrics, indent=2), encoding="utf-8")
         return self
 
     def predict(self, df, graph_flags, ring_sizes, sql_hits):

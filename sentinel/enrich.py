@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -12,9 +13,11 @@ from .schema import EnrichedTrip, validate_dataframe
 log = logging.getLogger(__name__)
 
 
-def enrich(seed: int = 42) -> pd.DataFrame:
+def enrich(
+    seed: int = 42, bronze_dir: Path = BRONZE, silver_dir: Path = SILVER
+) -> pd.DataFrame:
     ensure_directories()
-    source = BRONZE / "train_transaction.parquet"
+    source = bronze_dir / "train_transaction.parquet"
     if not source.exists():
         raise FileNotFoundError("Run `python -m sentinel.ingest` first.")
     df = pd.read_parquet(source)
@@ -98,7 +101,8 @@ def enrich(seed: int = 42) -> pd.DataFrame:
         .astype(int)
     )
     validate_dataframe(df, EnrichedTrip)
-    output = SILVER / "spark_driver_trips.parquet"
+    silver_dir.mkdir(parents=True, exist_ok=True)
+    output = silver_dir / "spark_driver_trips.parquet"
     df.to_parquet(output, index=False)
     log.info(
         "silver_written",

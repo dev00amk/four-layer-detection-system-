@@ -10,7 +10,8 @@ requires-python = ">=3.10"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --cov=sentinel --cov-report=term-missing --cov-fail-under=40"
+addopts = "-q --cov=sentinel --cov-report=term-missing --cov-fail-under=60"
+tmp_path_retention_policy = "failed"
 pythonpath = ["."]
 
 [tool.ruff]

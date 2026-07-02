@@ -28,6 +28,7 @@ def record_disposition(
     investigator_id: str,
     notes: str = "",
     review_ts: str | None = None,
+    ledger_path: Path | None = None,
 ) -> dict[str, object]:
     """Append one validated investigator outcome to the immutable JSONL ledger."""
     if disposition not in VALID_DISPOSITIONS:
@@ -45,8 +46,9 @@ def record_disposition(
         "notes": notes[:500],
         "review_ts": review_ts or datetime.now(timezone.utc).isoformat(),
     }
-    FEEDBACK.mkdir(parents=True, exist_ok=True)
-    with LABEL_FILE.open("a", encoding="utf-8") as handle:
+    target = ledger_path or LABEL_FILE
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record) + "\n")
     return record
 
@@ -107,7 +109,9 @@ def check_retraining_triggers(
     }
 
 
-def generate_feedback_report(path: Path | None = None) -> str:
+def generate_feedback_report(
+    path: Path | None = None, output_dir: Path | None = None
+) -> str:
     """Write a reviewer-friendly Markdown summary of the feedback loop."""
     labels = load_labels(path)
     counts = label_counts(labels)
@@ -124,6 +128,7 @@ def generate_feedback_report(path: Path | None = None) -> str:
         f"- Retraining required: {'YES' if triggers['trigger_retrain'] else 'NO'}",
         "",
     ])
-    FEEDBACK.mkdir(parents=True, exist_ok=True)
-    (FEEDBACK / "feedback_report.md").write_text(text, encoding="utf-8")
+    target_dir = output_dir or FEEDBACK
+    target_dir.mkdir(parents=True, exist_ok=True)
+    (target_dir / "feedback_report.md").write_text(text, encoding="utf-8")
     return text

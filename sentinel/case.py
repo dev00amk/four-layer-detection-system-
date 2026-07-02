@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pandas as pd
 
@@ -23,9 +24,12 @@ def generate_cases_from_scores(
     shap_df: pd.DataFrame,
     cross_role_df: pd.DataFrame,
     limit: int | None = None,
+    output_dir: Path | None = None,
 ) -> int:
     """Generate the bounded critical-case queue and return its case count."""
     ensure_directories()
+    target_dir = output_dir or CASES
+    target_dir.mkdir(parents=True, exist_ok=True)
     critical = (
         scored[scored["band"].str.startswith("CRITICAL")]
         .drop_duplicates("driver_id")
@@ -119,6 +123,6 @@ store, and campaign links. Escalate sensitive adverse-action decisions to Legal/
 **Notes:**  
 """
         body += f"\n**Evidence integrity SHA-256:** `{_evidence_hash(body)}`\n"
-        (CASES / f"CASE_{row.driver_id}.md").write_text(body, encoding="utf-8")
+        (target_dir / f"CASE_{row.driver_id}.md").write_text(body, encoding="utf-8")
         log.info("case_generated", extra={"driver_id": row.driver_id, "band": row.band})
     return len(critical)
