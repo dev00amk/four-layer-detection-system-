@@ -10,6 +10,7 @@ data/models/*
 mlruns/
 __pycache__/
 .pytest_cache/
+.coverage
 .test_tmp/
 .ipynb_checkpoints/
 *.pyc

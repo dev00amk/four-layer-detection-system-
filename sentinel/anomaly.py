@@ -1,12 +1,56 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import MinMaxScaler
 
+from .config import settings
 from .signals import MAX_FRAUD_SIGNALS
 
-WEIGHTS = {"xgb": 0.45, "iforest": 0.25, "sql": 0.20, "graph": 0.10}
+WEIGHTS = {
+    "xgb": settings.xgb_weight,
+    "iforest": settings.iforest_weight,
+    "sql": settings.sql_weight,
+    "graph": settings.graph_weight,
+}
+
+
+@dataclass(frozen=True)
+class FatalSignal:
+    """A high-confidence signal that bypasses the weighted score."""
+
+    signal_id: str
+    label: str
+    evidence: str
+
+
+def evaluate_fatal_signals(row) -> list[FatalSignal]:
+    """Evaluate the narrowly scoped fatal-tier controls for one trip."""
+    signals: list[FatalSignal] = []
+    duration_hours = max(float(row.get("trip_duration_min", 0)) / 60.0, 1 / 3600)
+    speed_kph = float(row.get("trip_distance_km", 0)) / duration_hours
+    if speed_kph > 300:
+        signals.append(FatalSignal("F01", "Impossible travel speed", f"{speed_kph:.1f} kph"))
+    device_flags = [
+        int(row.get("emulator_flag", 0)),
+        int(row.get("rooted_device_flag", row.get("root_flag", 0))),
+        int(row.get("gps_mock_flag", 0)),
+    ]
+    if all(device_flags):
+        signals.append(
+            FatalSignal("F02", "Compound device compromise", "emulator + root + mock GPS")
+        )
+    if int(row.get("payout_change_72h", 0)) and int(row.get("new_device_flag", 0)):
+        signals.append(
+            FatalSignal(
+                "F03",
+                "Payout redirection on new device",
+                "payout changed within 72h and new device observed near settlement",
+            )
+        )
+    return signals
 
 
 class IsolationForestDetector:
@@ -54,7 +98,7 @@ class IsolationForestDetector:
         return self.scaler.transform(raw.reshape(-1, 1)).ravel().clip(0, 1)
 
 
-def ensemble_score(if_score, xgb_prob, graph_flag, sql_hits, ring_size=0):
+def ensemble_score(if_score, xgb_prob, graph_flag, sql_hits, ring_size=0, fatal_signals=None):
     """
     Blend the four detection layers into a bounded 0-10 score.
 
@@ -79,15 +123,19 @@ def ensemble_score(if_score, xgb_prob, graph_flag, sql_hits, ring_size=0):
     )
     raw *= multiplier
     score = np.rint(np.clip(raw * 10, 0, 10)).astype(int)
-    return int(score) if score.ndim == 0 else score
+    is_fatal = bool(fatal_signals)
+    if is_fatal:
+        score = np.full_like(score, 10)
+    result = int(score) if score.ndim == 0 else score
+    return result, is_fatal
 
 
-def risk_band_router(score: int) -> str:
-    if score >= 9:
+def risk_band_router(score: int, is_fatal: bool = False) -> str:
+    if is_fatal or score >= settings.critical_plus_threshold:
         return "CRITICAL+"
-    if score >= 7:
+    if score >= settings.critical_risk_threshold:
         return "CRITICAL"
-    if score >= 5:
+    if score >= settings.high_risk_threshold:
         return "HIGH"
     if score >= 3:
         return "MEDIUM"

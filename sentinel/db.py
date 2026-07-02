@@ -4,7 +4,7 @@ from __future__ import annotations
 import duckdb
 import pandas as pd
 
-from .config import GOLD, GRAPH, ROOT, SILVER, ensure_directories
+from .config import GOLD, ROOT, SILVER, ensure_directories
 
 
 def get_connection(read_only: bool = False) -> duckdb.DuckDBPyConnection:

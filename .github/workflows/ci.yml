@@ -1,19 +1,35 @@
 name: CI
+
 on:
   push:
   pull_request:
+
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: ruff check sentinel tests run.py
+      - run: mypy sentinel run.py
+
+  test:
+    needs: quality
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
       - run: pip install -r requirements.txt
       - run: pytest
-      - run: python -m sentinel.demo --rows 3000
-      - run: python -m sentinel.ingest
-      - run: python -m sentinel.enrich
-      - run: python run.py
-
+      - run: python run.py full --rows 3000

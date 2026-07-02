@@ -1,10 +1,15 @@
 """Add deterministic Spark Driver telemetry to the IEEE-CIS base."""
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pandas as pd
 
 from .config import BRONZE, SILVER, ensure_directories
+from .schema import EnrichedTrip, validate_dataframe
+
+log = logging.getLogger(__name__)
 
 
 def enrich(seed: int = 42) -> pd.DataFrame:
@@ -83,9 +88,22 @@ def enrich(seed: int = 42) -> pd.DataFrame:
     df.loc[gps_indices, ["pickup_lon", "dropoff_lon"]] = -74.0
     df.loc[gps_indices, "gps_accuracy_m"] = 10.0
     df.loc[gps_indices, "gps_mock_flag"] = 1
+    device_sequence = df.sort_values(["driver_id", "event_ts"]).groupby(
+        "driver_id", observed=True
+    )["device_id"]
+    df["new_device_flag"] = (
+        device_sequence.transform(lambda values: values.ne(values.shift()).astype(int))
+        .reindex(df.index)
+        .fillna(1)
+        .astype(int)
+    )
+    validate_dataframe(df, EnrichedTrip)
     output = SILVER / "spark_driver_trips.parquet"
     df.to_parquet(output, index=False)
-    print(f"Silver written: {output} shape={df.shape} fraud_rate={df.isFraud.mean():.3%} emulator_rate={df.emulator_flag.mean():.3%}")
+    log.info(
+        "silver_written",
+        extra={"path": output, "rows": len(df), "fraud_rate": float(df.isFraud.mean())},
+    )
     return df
 
 

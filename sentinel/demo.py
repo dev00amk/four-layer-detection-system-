@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 import argparse
+import logging
+
 import numpy as np
 import pandas as pd
 
 from .config import RAW, ensure_directories
+
+log = logging.getLogger(__name__)
 
 
 def generate_demo(rows: int = 12_000, seed: int = 42) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -54,9 +58,8 @@ def main() -> None:
     txn, identity = generate_demo(args.rows, args.seed)
     txn.to_csv(RAW / "train_transaction.csv", index=False)
     identity.to_csv(RAW / "train_identity.csv", index=False)
-    print(f"Demo dataset written: transactions={len(txn):,}, identity={len(identity):,}")
+    log.info("demo_written", extra={"transactions": len(txn), "identity": len(identity)})
 
 
 if __name__ == "__main__":
     main()
-

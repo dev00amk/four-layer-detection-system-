@@ -35,10 +35,8 @@ Hard-blocks production deployment if any group fails the four-fifths rule
 from __future__ import annotations
 
 import json
-import math
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Sequence
 
 FAIRNESS_DIR = Path("data/fairness")
 ALERTS_FILE = FAIRNESS_DIR / "alerts.jsonl"

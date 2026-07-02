@@ -50,14 +50,71 @@ import logging
 import os
 import random
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import requests
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+from .config import OsintMode, settings
+from .logger import set_correlation_id
 
 log = logging.getLogger(__name__)
+
+
+class OsintVendorError(RuntimeError):
+    """Raised when an approved live OSINT vendor cannot return a usable result."""
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=8), reraise=True)
+def _vendor_lookup(url: str, api_key: str, payload: dict[str, str]) -> dict[str, Any]:
+    """Call an approved vendor endpoint with bounded retries and timeout."""
+    try:
+        response = requests.post(
+            url,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=10,
+        )
+        response.raise_for_status()
+        body = response.json()
+        if not isinstance(body, dict):
+            raise OsintVendorError("Vendor response was not a JSON object")
+        return body
+    except (requests.RequestException, ValueError) as exc:
+        raise OsintVendorError(f"Vendor request failed: {type(exc).__name__}") from exc
+
+
+def _live_result(
+    step_id: str,
+    label: str,
+    source_type: str,
+    driver_id: str,
+    query: str,
+    url: str,
+    api_key: str,
+    payload: dict[str, str],
+) -> OsintResult:
+    body = _vendor_lookup(url, api_key, payload)
+    code = str(body.get("result_code", "INCONCLUSIVE")).upper()
+    risk = bool(body.get("risk_signal", False))
+    return OsintResult(
+        step_id=step_id,
+        step_label=label,
+        source_type=source_type,
+        query_method="Approved vendor API lookup",
+        result_code=code,
+        result_detail=str(body.get("result_detail", "Vendor returned no detail")),
+        confidence=str(body.get("confidence", "N/A")).upper(),
+        risk_signal=risk,
+        timestamp_utc=_ts(),
+        source_reference=url,
+        query_hash=_query_hash(step_id, driver_id, query),
+        simulated=False,
+    )
 
 # ---------------------------------------------------------------------------
 # Result schema
@@ -177,6 +234,12 @@ def verify_identity_document(driver_id: str, document_type: str = "government_id
     _simulate_latency()
     step_id = "identity_document_verify"
     query = f"driver_id={driver_id} document_type={document_type}"
+    if settings.osint_mode == OsintMode.LIVE:
+        return _live_result(
+            step_id, "Identity document authenticity", "identity_vendor", driver_id, query,
+            settings.identity_api_url, settings.identity_api_key,
+            {"driver_id": driver_id, "document_type": document_type},
+        )
 
     # Simulation: ~20% of drivers show identity verification anomalies
     is_risk = _seeded_bool(driver_id, step_id, fraud_rate=0.20)
@@ -221,6 +284,12 @@ def check_device_intelligence(driver_id: str, device_id: str) -> OsintResult:
     _simulate_latency()
     step_id = "device_intelligence"
     query = f"device_id={device_id}"
+    if settings.osint_mode == OsintMode.LIVE:
+        return _live_result(
+            step_id, "Device risk intelligence", "device_intel", driver_id, query,
+            settings.device_api_url, settings.device_api_key,
+            {"driver_id": driver_id, "device_id": device_id},
+        )
 
     is_risk = _seeded_bool(device_id, step_id, fraud_rate=0.18)
 
@@ -265,6 +334,12 @@ def verify_address(driver_id: str, address_hash: str) -> OsintResult:
     _simulate_latency(ms_min=40, ms_max=150)
     step_id = "address_verification"
     query = f"driver_id={driver_id} address_hash={address_hash}"
+    if settings.osint_mode == OsintMode.LIVE:
+        return _live_result(
+            step_id, "Registered address type verification", "public_record", driver_id,
+            query, settings.address_api_url, settings.address_api_key,
+            {"driver_id": driver_id, "address_hash": address_hash},
+        )
 
     is_risk = _seeded_bool(address_hash, step_id, fraud_rate=0.12)
 
@@ -419,8 +494,9 @@ def enrich_driver(
     """
     skip = set(skip_steps or [])
     results: list[OsintResult] = []
+    set_correlation_id(driver_id)
 
-    log.info(f"OSINT enrichment starting for {driver_id}")
+    log.info("osint_enrichment_started", extra={"driver_id": driver_id, "mode": settings.osint_mode})
 
     steps = [
         ("identity_document_verify",
@@ -442,10 +518,15 @@ def enrich_driver(
         try:
             result = step_fn()
             results.append(result)
-            icon = "⚠" if result.risk_signal else "✓"
-            log.info(f"  {icon} {step_id}: {result.result_code}")
+            log.info(
+                "osint_step_completed",
+                extra={"driver_id": driver_id, "step_id": step_id, "result_code": result.result_code},
+            )
         except Exception as exc:
-            log.error(f"  OSINT step {step_id} failed: {exc}")
+            log.error(
+                "osint_step_failed",
+                extra={"driver_id": driver_id, "step_id": step_id, "error_type": type(exc).__name__},
+            )
             results.append(OsintResult(
                 step_id=step_id,
                 step_label=step_id.replace("_", " ").title(),

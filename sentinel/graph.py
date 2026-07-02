@@ -1,6 +1,7 @@
 """Shared-entity graph detection for coordinated fraud rings."""
 from __future__ import annotations
 
+import logging
 from itertools import combinations
 from pathlib import Path
 
@@ -8,6 +9,8 @@ import networkx as nx
 import pandas as pd
 
 from .config import GRAPH, SILVER, ensure_directories
+
+log = logging.getLogger(__name__)
 
 
 def detect_rings(
@@ -28,7 +31,7 @@ def detect_rings(
     for driver, data in graph.nodes(data=True):
         if data.get("kind") != "driver":
             continue
-        entities = {"device": set(), "bank": set(), "store": set()}
+        entities: dict[str, set[str]] = {"device": set(), "bank": set(), "store": set()}
         for entity in graph.neighbors(driver):
             edge = graph.edges[driver, entity]
             kind = graph.nodes[entity].get("kind")
@@ -44,7 +47,8 @@ def detect_rings(
         for left_type, right_type in entity_type_pairs:
             for left in entities[left_type]:
                 for right in entities[right_type]:
-                    signature_drivers.setdefault(tuple(sorted((left, right))), set()).add(driver)
+                    signature = tuple(sorted((left, right)))
+                    signature_drivers.setdefault((signature[0], signature[1]), set()).add(driver)
 
     candidate_groups: dict[frozenset[str], set[str]] = {}
     for signature, drivers in signature_drivers.items():
@@ -74,22 +78,22 @@ def detect_rings(
         key=lambda item: (-len(item[0]), sorted(item[0])),
     )
     for ring_id, (component, shared_type_set) in enumerate(ordered_groups, start=1):
-        drivers = sorted(component)
-        shared_types = sorted(shared_type_set)
+        ring_drivers = sorted(component)
+        shared_type_names = sorted(shared_type_set)
         common_stores = set.intersection(
-            *(driver_entities[driver]["store"] for driver in drivers)
+            *(driver_entities[driver]["store"] for driver in ring_drivers)
         )
         shared_stores = sorted(store.split(":", 1)[1] for store in common_stores)
-        for driver in drivers:
+        for driver in ring_drivers:
             rings.append(
                 {
                     "ring_id": f"R{ring_id:05d}",
                     "driver_id": driver.split(":", 1)[1],
-                    "ring_size": len(drivers),
+                    "ring_size": len(ring_drivers),
                     "store_count": len(shared_stores),
                     "store_ids": ", ".join(shared_stores),
-                    "shared_entity_type_count": len(shared_types),
-                    "shared_entity_types": ", ".join(shared_types),
+                    "shared_entity_type_count": len(shared_type_names),
+                    "shared_entity_types": ", ".join(shared_type_names),
                 }
             )
     return pd.DataFrame(
@@ -150,9 +154,14 @@ def build_graph(min_ring_size: int = 2) -> pd.DataFrame:
     for _, data in G.nodes(data=True):
         node_type = data.get("kind", "unknown")
         node_types[node_type] = node_types.get(node_type, 0) + 1
-    print(
-        f"Graph: {G.number_of_nodes():,} nodes ({node_types}) | "
-        f"{G.number_of_edges():,} edges | {result['ring_id'].nunique():,} rings"
+    log.info(
+        "graph_built",
+        extra={
+            "nodes": G.number_of_nodes(),
+            "node_types": node_types,
+            "edges": G.number_of_edges(),
+            "rings": result["ring_id"].nunique(),
+        },
     )
     return result
 

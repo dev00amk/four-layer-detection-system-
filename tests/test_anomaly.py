@@ -5,7 +5,9 @@ from sentinel.signals import MAX_FRAUD_SIGNALS, MONITORING_SIGNALS
 
 
 def test_score_ceiling():
-    assert ensemble_score(0.99, 0.99, 1, 22, ring_size=99) <= 10
+    score, is_fatal = ensemble_score(0.99, 0.99, 1, 22, ring_size=99)
+    assert score <= 10
+    assert not is_fatal
 
 
 def test_band_routing():
@@ -13,20 +15,20 @@ def test_band_routing():
 
 
 def test_sql_normalization_and_vectorization():
-    scores = ensemble_score(np.array([0.5, 0.5]), np.array([0.5, 0.5]), np.array([0, 0]), np.array([0, 22]))
+    scores, _ = ensemble_score(np.array([0.5, 0.5]), np.array([0.5, 0.5]), np.array([0, 0]), np.array([0, 22]))
     assert scores[1] > scores[0]
     assert scores.min() >= 0 and scores.max() <= 10
 
 
 def test_ring_multiplier_proportional():
-    score_pair = ensemble_score(0.5, 0.5, 1, 11, ring_size=2)
-    score_ring5 = ensemble_score(0.5, 0.5, 1, 11, ring_size=5)
+    score_pair, _ = ensemble_score(0.5, 0.5, 1, 11, ring_size=2)
+    score_ring5, _ = ensemble_score(0.5, 0.5, 1, 11, ring_size=5)
     assert score_ring5 > score_pair
 
 
 def test_ring_multiplier_requires_graph_flag():
-    score_with_size = ensemble_score(0.5, 0.5, 0, 11, ring_size=5)
-    score_without_size = ensemble_score(0.5, 0.5, 0, 11, ring_size=0)
+    score_with_size, _ = ensemble_score(0.5, 0.5, 0, 11, ring_size=5)
+    score_without_size, _ = ensemble_score(0.5, 0.5, 0, 11, ring_size=0)
     assert score_with_size == score_without_size
 
 

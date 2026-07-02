@@ -120,10 +120,20 @@ SQL Signals  ML Models (Isolation Forest + XGBoost + Graph)
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m sentinel.demo     # generates synthetic raw CSVs — no Kaggle download required
-python -m sentinel.ingest   # converts data/raw CSVs to bronze Parquet
-python -m sentinel.enrich
-python run.py
+copy .env.example .env           # Windows; use `cp` on macOS/Linux
+python run.py full               # credential-free 12,000-row demonstration
+```
+
+The CLI also exposes independently restartable phases:
+
+```text
+python run.py demo [--rows N] [--seed N]  Generate deterministic source CSVs
+python run.py ingest                       Validate and write immutable bronze
+python run.py enrich                       Validate and write delivery telemetry
+python run.py score                        Build graph, train models, and score
+python run.py cases                        Generate the bounded case queue
+python run.py report                       Write investigator feedback metrics
+python run.py full                         Execute the complete local workflow
 ```
 
 For the full 590,540-row dataset, accept the IEEE-CIS competition rules, place `train_transaction.csv` and `train_identity.csv` in `data/raw/`, and start at ingestion.
@@ -140,6 +150,13 @@ For the full 590,540-row dataset, accept the IEEE-CIS competition rules, place `
 | **Entity Graph** | Coordinated multi-account behaviour via shared device, bank, store | Ring flag + ring size |
 
 Blend weights: XGBoost 45%, Isolation Forest 25%, SQL 20%, graph 10%. Ring members receive a proportional multiplier (1.2× for a 2-contractor pair, up to 1.5× for a 5+ contractor ring), capped at 10. IP cluster edges are excluded from ring detection to prevent carrier NAT false positives.
+
+Three narrowly defined fatal-tier controls—impossible travel above 300 km/h,
+simultaneous emulator/root/mock-GPS evidence, and payout redirection from a
+new device—route directly to CRITICAL+ review. This controls queue priority,
+never automated adverse action. Behavioral features use 7-, 30-, and 90-day
+windows with trend deltas, and Pydantic contracts validate bronze and silver
+dataset boundaries.
 
 ---
 
@@ -223,6 +240,33 @@ Run `python scripts/create_notebooks.py` to rebuild notebooks. Generated data an
 ## Streaming Extension
 
 The batch interfaces map cleanly to Kafka and Flink: key telemetry by `contractor_id`, maintain time-windowed signal state, materialise entity edges incrementally, and send scored events to a review queue. The three highest-value signals (GPS impossible transit, shared device, shared payout) are the priority streaming candidates — catching them before payout settlement is 3–5× more valuable than post-settlement detection. Thresholds and adverse-action decisions must remain human-governed, monitored for drift and disparate impact, and validated against real operational labels.
+
+---
+
+## Configuration, quality gates, and production migration
+
+Runtime behavior is configured through [`.env.example`](.env.example).
+`OSINT_MODE=sim` is the safe default and makes no external requests.
+`OSINT_MODE=live` fails closed unless approved vendor credentials are present;
+the included adapters are generic seams requiring vendor-contract validation.
+
+Every CLI phase emits JSON logs with run and driver correlation IDs. CI runs
+Ruff, mypy, coverage-enforced tests, and the end-to-end demo on Python 3.10
+and 3.11.
+
+```bash
+ruff check sentinel tests run.py
+mypy sentinel run.py
+pytest
+```
+
+Before operational use, replace synthetic telemetry and IEEE-CIS abstractions,
+validate vendor contracts, calibrate thresholds on representative labels,
+complete privacy/fairness review, configure secrets outside the repository,
+and connect investigator dispositions through `sentinel/feedback.py`.
+
+Contributions should be small, tested, and include threshold rationale and
+false-positive impact when detection logic changes.
 
 ---
 

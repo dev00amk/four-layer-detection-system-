@@ -10,9 +10,14 @@ from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
-from .anomaly import IsolationForestDetector, ensemble_score, risk_band_router
+from .anomaly import (
+    IsolationForestDetector,
+    ensemble_score,
+    evaluate_fatal_signals,
+    risk_band_router,
+)
 from .config import MODELS, ensure_directories
-from .features import BEHAVIORAL_FEATURES, build_behavioral_features
+from .features import BEHAVIORAL_FEATURES, ROLLING_FEATURES, build_behavioral_features
 
 # XGBoost feature matrix: three groups with an explicit production migration path.
 #
@@ -50,8 +55,9 @@ _FEAT_B = [
 # Group C is data-source-agnostic behavioral segmentation. Retain the feature
 # logic and recalibrate peer/cohort baselines on representative operational data.
 _FEAT_C = list(BEHAVIORAL_FEATURES)
+_FEAT_D = list(ROLLING_FEATURES)
 
-XGB_FEATURES: list[str] = _FEAT_A + _FEAT_B + _FEAT_C
+XGB_FEATURES: list[str] = _FEAT_A + _FEAT_B + _FEAT_C + _FEAT_D
 
 
 class SentinelModel:
@@ -66,7 +72,7 @@ class SentinelModel:
             colsample_bytree=0.8, eval_metric="logloss", n_jobs=-1, random_state=random_state,
         )
         self.iforest = IsolationForestDetector(random_state=random_state)
-        self.metrics = {}
+        self.metrics: dict[str, float | int] = {}
 
     def _matrix(self, df):
         featured = build_behavioral_features(df)
@@ -96,13 +102,21 @@ class SentinelModel:
         X = self._matrix(df)
         xgb_prob = self.xgb.predict_proba(X)[:, 1]
         if_score = self.iforest.predict_score(X)
-        score = ensemble_score(
+        score, _ = ensemble_score(
             if_score,
             xgb_prob,
             np.asarray(graph_flags),
             np.asarray(sql_hits),
             np.asarray(ring_sizes),
         )
+        fatal_lists = [evaluate_fatal_signals(row) for _, row in df.iterrows()]
+        is_fatal = np.array([bool(signals) for signals in fatal_lists])
+        score = np.where(is_fatal, 10, score)
+        fatal_ids = [",".join(signal.signal_id for signal in signals) for signals in fatal_lists]
+        fatal_evidence = [
+            "; ".join(f"{signal.label}: {signal.evidence}" for signal in signals)
+            for signals in fatal_lists
+        ]
         return pd.DataFrame(
             {
                 "driver_id": df["driver_id"].values,
@@ -113,7 +127,13 @@ class SentinelModel:
                 "ring_size": np.asarray(ring_sizes),
                 "sql_hits": np.asarray(sql_hits),
                 "score": score,
-                "band": [risk_band_router(int(value)) for value in score],
+                "is_fatal": is_fatal,
+                "fatal_signal_ids": fatal_ids,
+                "fatal_evidence": fatal_evidence,
+                "band": [
+                    risk_band_router(int(value), bool(fatal))
+                    for value, fatal in zip(score, is_fatal)
+                ],
             }
         )
 
@@ -137,8 +157,8 @@ class SentinelModel:
 
 
 def main():
-    from .db import get_connection, get_scored_inputs
     from .config import SILVER
+    from .db import get_connection, get_scored_inputs
 
     df = pd.read_parquet(SILVER / "spark_driver_trips.parquet")
     con = get_connection()

@@ -4,17 +4,15 @@ tests/test_osint.py
 Tests for sentinel/osint.py — OSINT enrichment module.
 """
 
-import pytest
 import pandas as pd
+
 from sentinel.osint import (
-    enrich_driver,
-    verify_identity_document,
-    check_device_intelligence,
-    check_account_resale_signals,
     OsintEnrichmentPackage,
     OsintResult,
+    check_device_intelligence,
+    enrich_driver,
+    verify_identity_document,
 )
-
 
 # ---------------------------------------------------------------------------
 # OsintResult schema tests
