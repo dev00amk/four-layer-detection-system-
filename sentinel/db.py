@@ -1,10 +1,14 @@
 """DuckDB connection and typed feature bridges."""
 from __future__ import annotations
 
+import logging
+
 import duckdb
 import pandas as pd
 
 from .config import GOLD, ROOT, SILVER, ensure_directories
+
+log = logging.getLogger("sentinel.db")
 
 
 def get_connection(read_only: bool = False) -> duckdb.DuckDBPyConnection:
@@ -37,6 +41,9 @@ def get_cross_role_df(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     try:
         return con.execute("SELECT * FROM cross_role_risk").df()
     except duckdb.Error:
+        # Cases can still be generated without collusion evidence, so degrade
+        # to an empty frame — but loudly, so a missing view is investigated.
+        log.warning("cross_role_view_unavailable", exc_info=True)
         return pd.DataFrame(columns=["driver_id", "collusion_signal_count", "collusion_flag"])
 
 

@@ -523,9 +523,12 @@ def enrich_driver(
                 extra={"driver_id": driver_id, "step_id": step_id, "result_code": result.result_code},
             )
         except Exception as exc:
+            # Deliberately broad: one failed verification step must not abort
+            # the enrichment package — it degrades to an ERROR evidence record.
             log.error(
                 "osint_step_failed",
                 extra={"driver_id": driver_id, "step_id": step_id, "error_type": type(exc).__name__},
+                exc_info=True,
             )
             results.append(OsintResult(
                 step_id=step_id,

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -14,6 +15,7 @@ from sentinel.config import GOLD, GRAPH, RAW, SILVER, settings
 from sentinel.db import get_connection, get_cross_role_df, get_scored_inputs
 from sentinel.demo import generate_demo
 from sentinel.enrich import enrich
+from sentinel.exceptions import SentinelError
 from sentinel.feedback import generate_feedback_report
 from sentinel.graph import build_graph
 from sentinel.ingest import ingest
@@ -112,7 +114,13 @@ def main() -> None:
         "report": generate_feedback_report,
         "full": lambda: full_command(args.rows, args.seed),
     }
-    _timed(args.command, actions[args.command])
+    try:
+        _timed(args.command, actions[args.command])
+    except (SentinelError, FileNotFoundError) as exc:
+        # Expected operational failures: log cleanly, no traceback spew.
+        # Unexpected exceptions still propagate with a full stack trace.
+        log.error("pipeline_failed", extra={"phase": args.command, "error": str(exc)})
+        sys.exit(1)
 
 
 if __name__ == "__main__":
