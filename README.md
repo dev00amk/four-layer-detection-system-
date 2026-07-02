@@ -204,18 +204,19 @@ Run `python scripts/create_notebooks.py` to rebuild notebooks. Generated data an
 ## Documentation Index
 
 | Document | Purpose |
-|---|---|
-| `docs/OPERATIONAL_RISK.md` | Human-in-the-loop routing, auditability design, control ownership |
-| `docs/BUSINESS_IMPACT.md` | Quantified loss model for 6 attack families, ROI at 3 loss-pool sizes |
-| `docs/SIGNAL_PRIORITIZATION.md` | 3-axis triage framework (yield × FP cost × business impact) for all 25 signals |
-| `docs/CROSS_FUNCTIONAL_BRIEFING.md` | 4 stakeholder briefings: Product, Legal, Engineering, Care Operations |
-| `docs/FAILURE_MODE_ANALYSIS.md` | 6 failure modes with detection lag, early warning indicators, mitigation |
-| `docs/PLATFORM_EQUIVALENCE.md` | Maps Sentinel to NICE Actimize, Pega, Salesforce FSC, Unit21 |
-| `docs/DETECTION_STRATEGY.md` | Detection thresholds, evidence standards, false-positive controls, economics, and monitoring |
-| `docs/FRAUD_TECHNIQUES.md` | Fraud technique library, kill chain, lifecycle mapping, and signal coverage |
-| `docs/GOVERNANCE.md` | Risk appetite, action standards, appeals, escalation, QA, and model governance |
-| `docs/INVESTIGATOR_PLAYBOOK.md` | Eight-step investigation SOP from intake through escalation and case closure |
-| `docs/DECISION_LOG.md` | Material program decisions, alternatives, tradeoffs, rationale, and monitoring plans |
+|----------|---------|
+| [`docs/DEPARTMENT_CORE_MANDATE.md`](docs/DEPARTMENT_CORE_MANDATE.md) | Strategic mandate for LMD Fraud Prevention: infrastructure defense, ROI, low-friction integrity, and OODA operating model |
+| [`docs/OPERATIONAL_RISK.md`](docs/OPERATIONAL_RISK.md) | Human-in-the-loop routing, auditability design, control ownership |
+| [`docs/BUSINESS_IMPACT.md`](docs/BUSINESS_IMPACT.md) | Quantified loss model for 6 attack families, ROI at 3 loss-pool sizes |
+| [`docs/SIGNAL_PRIORITIZATION.md`](docs/SIGNAL_PRIORITIZATION.md) | 3-axis triage framework (yield × FP cost × business impact) for all 25 signals |
+| [`docs/CROSS_FUNCTIONAL_BRIEFING.md`](docs/CROSS_FUNCTIONAL_BRIEFING.md) | 4 stakeholder briefings: Product, Legal, Engineering, Care Operations |
+| [`docs/FAILURE_MODE_ANALYSIS.md`](docs/FAILURE_MODE_ANALYSIS.md) | 6 failure modes with detection lag, early warning indicators, mitigation |
+| [`docs/PLATFORM_EQUIVALENCE.md`](docs/PLATFORM_EQUIVALENCE.md) | Maps Sentinel to NICE Actimize, Pega, Salesforce FSC, Unit21 |
+| [`docs/DETECTION_STRATEGY.md`](docs/DETECTION_STRATEGY.md) | Detection thresholds, evidence standards, false-positive controls, economics, and monitoring |
+| [`docs/FRAUD_TECHNIQUES.md`](docs/FRAUD_TECHNIQUES.md) | Fraud technique library, kill chain, lifecycle mapping, and signal coverage |
+| [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md) | Risk appetite, action standards, appeals, escalation, QA, and model governance |
+| [`docs/INVESTIGATOR_PLAYBOOK.md`](docs/INVESTIGATOR_PLAYBOOK.md) | Eight-step investigation SOP from intake through escalation and case closure |
+| [`docs/DECISION_LOG.md`](docs/DECISION_LOG.md) | Material program decisions, alternatives, tradeoffs, rationale, and monitoring plans |
 
 ---
 
