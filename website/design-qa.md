@@ -14,6 +14,7 @@
 - CASE_001 graph opens in a modal and closes by button, backdrop, or Escape.
 - Anchor navigation and external repository/document links are populated.
 - Copy command has a native clipboard action.
+- Role capability tabs switch among four essential-function groups and expose twelve repository-backed evidence links.
 
 ## Responsive and accessibility checks
 
@@ -28,5 +29,6 @@
 - Demo scale is explicitly labeled synthetic.
 - No production efficacy, savings, or ROI claims are presented.
 - Footer states that this is not a Walmart system.
+- Degree and years-of-experience qualifications are not inferred from project artifacts.
 
 final result: passed
