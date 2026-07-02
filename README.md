@@ -1,5 +1,36 @@
 # Project Sentinel — Enterprise Last-Mile Fraud Detection Framework
 
+## Executive summary
+
+Project Sentinel turns last-mile delivery telemetry into prioritized, audit-ready fraud cases.
+It combines four detection layers: 25 explainable SQL signals, Isolation Forest anomaly
+detection, XGBoost with SHAP explanations, and a shared-entity graph. Together they address
+six fraud families: GPS spoofing, bot-assisted offer grabbing, coordinated rings, incentive
+abuse, account takeover and payout mules, and refund or delivery fraud. Run the complete
+credential-free demonstration with `python run.py full`. Sentinel is a trust decision system,
+not just a detector: it connects evidence, scoring, investigator review, product controls,
+and measurable loss prevention. Validation uses IEEE-CIS data plus clearly labeled,
+deterministic synthetic delivery telemetry; production use requires recalibration on labeled
+operational data.
+
+```mermaid
+flowchart LR
+    A["Signal<br/>SQL + anomaly + ML + graph"] --> B["Score<br/>sentinel/anomaly.py"]
+    B --> C["Case<br/>sentinel/case.py"]
+    C --> D["Decision<br/>investigator + governance"]
+    D --> E["Product Fix<br/>control or workflow change"]
+    E --> F["ROI<br/>docs/BUSINESS_IMPACT.md"]
+```
+
+The value loop moves from governed detection evidence to a human decision, then feeds
+preventive product controls and the scenario-based preventable-loss model.
+
+### Read this in 90 seconds
+
+- [Run the end-to-end demo](docs/DEMO_WALKTHROUGH.md)
+- [Review the preventable-loss and ROI model](docs/BUSINESS_IMPACT.md)
+- [Inspect the canonical coordinated-ring case](cases/CASE_001.md)
+
 > Multi-layer behavioral detection, structured OSINT enrichment, and investigator-ready case management engineered for auditability, false-positive control, and legal defensibility across crowdsourced logistics and gig-economy platforms.
 
 Sentinel converts raw Last-Mile Delivery (LMD) contractor telemetry into prioritised, audit-ready fraud cases — detecting GPS spoofing rings, bot-assisted offer grabbing, and coordinated payout abuse before settlement, while producing evidence packs that hold up to legal review and appeal. Every adverse action is traceable from raw event to investigator decision. Every signal documents its false-positive risk. Every queued CRITICAL-band output generates a case file that can be handed directly to Legal without further preparation.
