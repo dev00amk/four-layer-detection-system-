@@ -33,7 +33,9 @@ def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
 
 def add_zone_features(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
-    pair_count = result.groupby(["driver_id", "store_id"], observed=True)["trip_id"].transform("count")
+    pair_count = result.groupby(["driver_id", "store_id"], observed=True)["trip_id"].transform(
+        "count"
+    )
     driver_count = result.groupby("driver_id", observed=True)["trip_id"].transform("count")
     result["zone_concentration"] = (pair_count / driver_count.clip(lower=1)).clip(0, 1)
     return result
@@ -54,7 +56,9 @@ def add_interaction_rate_features(df: pd.DataFrame) -> pd.DataFrame:
 def add_cohort_deviation_features(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
     store_mean = result.groupby("store_id", observed=True)["geofence_dist_m"].transform("mean")
-    store_std = result.groupby("store_id", observed=True)["geofence_dist_m"].transform("std").fillna(1.0)
+    store_std = (
+        result.groupby("store_id", observed=True)["geofence_dist_m"].transform("std").fillna(1.0)
+    )
     result["peer_geofence_deviation"] = (
         (result["geofence_dist_m"] - store_mean) / store_std.replace(0, 1)
     ).replace([np.inf, -np.inf], 0).fillna(0)
@@ -76,7 +80,11 @@ def add_rolling_features(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
     timestamps = pd.to_datetime(result["event_ts"], errors="coerce")
     order = pd.DataFrame(
-        {"driver_id": result["driver_id"], "event_ts": timestamps, "_position": np.arange(len(result))}
+        {
+            "driver_id": result["driver_id"],
+            "event_ts": timestamps,
+            "_position": np.arange(len(result)),
+        }
     ).sort_values(["driver_id", "event_ts", "_position"])
     for feature in BEHAVIORAL_FEATURES:
         ordered_values = result.loc[order.index, feature].astype(float)

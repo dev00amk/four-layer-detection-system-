@@ -48,7 +48,7 @@ def test_shifted_distribution_alerts(baseline_scores, tmp_path):
 
 
 def test_alert_threshold_single_sourced_from_settings():
-    assert PSI_ALERT == settings.psi_threshold
+    assert settings.psi_threshold == PSI_ALERT
 
 
 def test_load_baseline_roundtrip(baseline_scores, tmp_path):

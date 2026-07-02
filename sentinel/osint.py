@@ -133,7 +133,7 @@ class OsintResult:
     """
     step_id: str                   # e.g. "identity_document_verify"
     step_label: str                # human label for case file
-    source_type: str               # "identity_vendor" | "device_intel" | "public_record" | "osint_web"
+    source_type: str  # "identity_vendor" | "device_intel" | "public_record" | "osint_web"
     query_method: str              # what was queried and how
     result_code: str               # "MATCH" | "MISMATCH" | "NOT_FOUND" | "INCONCLUSIVE" | "ERROR"
     result_detail: str             # one-sentence description of result
@@ -257,7 +257,10 @@ def verify_identity_document(driver_id: str, document_type: str = "government_id
         step_id=step_id,
         step_label="Identity document authenticity",
         source_type="identity_vendor",
-        query_method=f"Pull latest verification event from fact_driver_identity_verification for {driver_id}",
+        query_method=(
+            f"Pull latest verification event from fact_driver_identity_verification"
+            f" for {driver_id}"
+        ),
         result_code=result_code,
         result_detail=result_detail,
         confidence=confidence,
@@ -394,7 +397,9 @@ def check_account_resale_signals(driver_id: str) -> OsintResult:
 
     if is_risk:
         result_code   = "LISTING_FOUND"
-        result_detail = "Public listing found matching driver profile characteristics on known resale platform"
+        result_detail = (
+            "Public listing found matching driver profile characteristics on known resale platform"
+        )
         confidence    = "HIGH"
     else:
         result_code   = "NOT_FOUND"
@@ -405,7 +410,9 @@ def check_account_resale_signals(driver_id: str) -> OsintResult:
         step_id=step_id,
         step_label="Account resale / brokerage signals",
         source_type="osint_web",
-        query_method="Keyword search on known gig-account resale forums (policy-approved sources only)",
+        query_method=(
+            "Keyword search on known gig-account resale forums (policy-approved sources only)"
+        ),
         result_code=result_code,
         result_detail=result_detail,
         confidence=confidence,
@@ -442,18 +449,24 @@ def verify_contractor_presence(driver_id: str, registered_name: str = "") -> Osi
 
     if is_risk:
         result_code   = "NO_PRESENCE"
-        result_detail = "No verifiable public contractor or business presence found for registered name"
+        result_detail = (
+            "No verifiable public contractor or business presence found for registered name"
+        )
         confidence    = "MEDIUM"
     else:
         result_code   = "PRESENCE_FOUND"
-        result_detail = "Public contractor profile found; consistent with account registration claims"
+        result_detail = (
+            "Public contractor profile found; consistent with account registration claims"
+        )
         confidence    = "MEDIUM"
 
     return OsintResult(
         step_id=step_id,
         step_label="Public contractor presence verification",
         source_type="public_record",
-        query_method="Search public business registries and professional networks for registered name",
+        query_method=(
+            "Search public business registries and professional networks for registered name"
+        ),
         result_code=result_code,
         result_detail=result_detail,
         confidence=confidence,
@@ -496,7 +509,9 @@ def enrich_driver(
     results: list[OsintResult] = []
     set_correlation_id(driver_id)
 
-    log.info("osint_enrichment_started", extra={"driver_id": driver_id, "mode": settings.osint_mode})
+    log.info(
+        "osint_enrichment_started", extra={"driver_id": driver_id, "mode": settings.osint_mode}
+    )
 
     steps = [
         ("identity_document_verify",
@@ -520,14 +535,22 @@ def enrich_driver(
             results.append(result)
             log.info(
                 "osint_step_completed",
-                extra={"driver_id": driver_id, "step_id": step_id, "result_code": result.result_code},
+                extra={
+                    "driver_id": driver_id,
+                    "step_id": step_id,
+                    "result_code": result.result_code,
+                },
             )
         except Exception as exc:
             # Deliberately broad: one failed verification step must not abort
             # the enrichment package — it degrades to an ERROR evidence record.
             log.error(
                 "osint_step_failed",
-                extra={"driver_id": driver_id, "step_id": step_id, "error_type": type(exc).__name__},
+                extra={
+                    "driver_id": driver_id,
+                    "step_id": step_id,
+                    "error_type": type(exc).__name__,
+                },
                 exc_info=True,
             )
             results.append(OsintResult(

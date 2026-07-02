@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import MinMaxScaler
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 from .config import settings
 from .signals import MAX_FRAUD_SIGNALS
@@ -26,7 +30,7 @@ class FatalSignal:
     evidence: str
 
 
-def evaluate_fatal_signals(row) -> list[FatalSignal]:
+def evaluate_fatal_signals(row: pd.Series) -> list[FatalSignal]:
     """Evaluate the narrowly scoped fatal-tier controls for one trip."""
     signals: list[FatalSignal] = []
     duration_hours = max(float(row.get("trip_duration_min", 0)) / 60.0, 1 / 3600)
@@ -77,15 +81,17 @@ class IsolationForestDetector:
     """
 
     def __init__(self, contamination: float = 0.04, random_state: int = 42):
-        self.model = IsolationForest(contamination=contamination, random_state=random_state, n_jobs=-1)
+        self.model = IsolationForest(
+            contamination=contamination, random_state=random_state, n_jobs=-1
+        )
         self.scaler = MinMaxScaler()
 
-    def fit(self, features):
+    def fit(self, features: pd.DataFrame) -> IsolationForestDetector:
         raw = -self.model.fit(features).score_samples(features)
         self.scaler.fit(raw.reshape(-1, 1))
         return self
 
-    def predict_score(self, features):
+    def predict_score(self, features: pd.DataFrame) -> np.ndarray:
         """
         Return a normalized anomaly score in [0, 1].
 
@@ -95,10 +101,18 @@ class IsolationForestDetector:
         layer below XGBoost, whose output is produced by ``predict_proba``.
         """
         raw = -self.model.score_samples(features)
-        return self.scaler.transform(raw.reshape(-1, 1)).ravel().clip(0, 1)
+        scaled: np.ndarray = self.scaler.transform(raw.reshape(-1, 1)).ravel()
+        return scaled.clip(0, 1)
 
 
-def ensemble_score(if_score, xgb_prob, graph_flag, sql_hits, ring_size=0, fatal_signals=None):
+def ensemble_score(
+    if_score: float | np.ndarray,
+    xgb_prob: float | np.ndarray,
+    graph_flag: int | np.ndarray,
+    sql_hits: float | np.ndarray,
+    ring_size: int | np.ndarray = 0,
+    fatal_signals: list[FatalSignal] | None = None,
+) -> tuple[int | np.ndarray, bool]:
     """
     Blend the four detection layers into a bounded 0-10 score.
 

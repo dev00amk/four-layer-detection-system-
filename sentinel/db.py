@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import duckdb
 import pandas as pd
@@ -47,11 +48,18 @@ def get_cross_role_df(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
         return pd.DataFrame(columns=["driver_id", "collusion_signal_count", "collusion_flag"])
 
 
-def get_scored_inputs(con, feature_df: pd.DataFrame, graph_csv=None):
+def get_scored_inputs(
+    con: duckdb.DuckDBPyConnection,
+    feature_df: pd.DataFrame,
+    graph_csv: Path | None = None,
+) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Return (graph_flags, ring_sizes, sql_hits) aligned to feature_df.index."""
     from .graph import get_ring_flags
     from .signals import run_signals
 
-    driver_ids = feature_df["driver_id"] if "driver_id" in feature_df else feature_df.index.to_series()
+    driver_ids = (
+        feature_df["driver_id"] if "driver_id" in feature_df else feature_df.index.to_series()
+    )
     sql = run_signals(con).set_index("driver_id")["hit_count"]
     sql_hits = driver_ids.map(sql).fillna(0).astype(float)
     graph_flags, ring_sizes = get_ring_flags(driver_ids, graph_csv)

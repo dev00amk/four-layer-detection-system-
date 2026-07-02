@@ -11,11 +11,14 @@ def test_score_ceiling():
 
 
 def test_band_routing():
-    assert [risk_band_router(x) for x in (1, 3, 5, 7, 9)] == ["LOW", "MEDIUM", "HIGH", "CRITICAL", "CRITICAL+"]
+    expected = ["LOW", "MEDIUM", "HIGH", "CRITICAL", "CRITICAL+"]
+    assert [risk_band_router(x) for x in (1, 3, 5, 7, 9)] == expected
 
 
 def test_sql_normalization_and_vectorization():
-    scores, _ = ensemble_score(np.array([0.5, 0.5]), np.array([0.5, 0.5]), np.array([0, 0]), np.array([0, 22]))
+    scores, _ = ensemble_score(
+        np.array([0.5, 0.5]), np.array([0.5, 0.5]), np.array([0, 0]), np.array([0, 22])
+    )
     assert scores[1] > scores[0]
     assert scores.min() >= 0 and scores.max() <= 10
 

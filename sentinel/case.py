@@ -65,7 +65,7 @@ This override controls queue priority only; it never authorizes automated advers
 """
         body = f"""# Sentinel Investigation Case — {row.driver_id}
 
-**Created:** {datetime.now(timezone.utc).isoformat()}  
+**Created:** {datetime.now(timezone.utc).isoformat()}<br>
 **Risk band:** {row.band} | **Ensemble score:** {row.score}/10
 
 ## Four-layer evidence
@@ -118,9 +118,9 @@ store, and campaign links. Escalate sensitive adverse-action decisions to Legal/
 
 ## Resolution
 
-**Owner:** Unassigned  
-**Disposition:** Pending  
-**Notes:**  
+**Owner:** Unassigned<br>
+**Disposition:** Pending<br>
+**Notes:**
 """
         body += f"\n**Evidence integrity SHA-256:** `{_evidence_hash(body)}`\n"
         (target_dir / f"CASE_{row.driver_id}.md").write_text(body, encoding="utf-8")

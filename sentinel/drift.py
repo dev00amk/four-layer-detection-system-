@@ -21,13 +21,21 @@ data/drift/baseline.json on first run.
 
 from __future__ import annotations
 
+import itertools
 import json
+import logging
 import math
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 from .config import DATA, settings
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+log = logging.getLogger("sentinel.drift")
 
 DRIFT_DIR = DATA / "drift"
 BASELINE_FILE = DRIFT_DIR / "baseline.json"
@@ -64,16 +72,16 @@ def _bin_scores(scores: Sequence[float], n_bins: int = N_BINS) -> list[float]:
 def _psi(expected: list[float], actual: list[float]) -> float:
     """Compute Population Stability Index between two normalised distributions."""
     psi = 0.0
-    for e, a in zip(expected, actual):
+    for e, a in zip(expected, actual, strict=True):
         psi += (a - e) * math.log(a / e)
     return psi
 
 
 def _band_rates(scores: Sequence[float]) -> dict[str, float]:
     """Return fraction of scores in each risk band."""
-    counts = {b: 0 for b in BAND_NAMES}
+    counts = dict.fromkeys(BAND_NAMES, 0)
     for s in scores:
-        for i, (lo, hi) in enumerate(zip(BAND_BOUNDARIES, BAND_BOUNDARIES[1:])):
+        for i, (lo, hi) in enumerate(itertools.pairwise(BAND_BOUNDARIES)):
             if lo <= s < hi:
                 counts[BAND_NAMES[i]] += 1
                 break
@@ -119,7 +127,8 @@ def load_baseline(drift_dir: Path = DRIFT_DIR) -> dict | None:
     baseline_file = drift_dir / "baseline.json"
     if not baseline_file.exists():
         return None
-    return json.loads(baseline_file.read_text())
+    baseline: dict = json.loads(baseline_file.read_text())
+    return baseline
 
 
 # ---------------------------------------------------------------------------
@@ -219,29 +228,33 @@ def check_drift(
 # Convenience wrapper for run.py integration
 # ---------------------------------------------------------------------------
 
-def run_drift_check(scored_df, score_col: str = "score") -> dict:
+def run_drift_check(scored_df: pd.DataFrame, score_col: str = "score") -> dict:
     """
     Accept a pandas/polars DataFrame and run drift check.
     Returns drift result dict. Call after ensemble scoring in run.py.
     """
     scores = scored_df[score_col].dropna().tolist()
     result = check_drift(scores)
-    print(f"[drift] PSI={result['psi']:.3f} status={result['psi_status']}")
+    log.info(
+        "drift_check",
+        extra={"psi": result["psi"], "psi_status": result["psi_status"]},
+    )
     if result["alert_written"]:
-        print(f"[drift] Alert written to {ALERTS_FILE}")
+        log.warning("drift_alert_written", extra={"alerts_file": str(ALERTS_FILE)})
     return result
 
 
 if __name__ == "__main__":
     import random
+
+    from .logger import configure_logging
+
+    configure_logging()
     # Smoke-test: generate baseline then simulate a shifted distribution
     baseline_scores = [random.gauss(3.0, 1.5) for _ in range(1000)]
     baseline_scores = [max(0.0, min(10.0, s)) for s in baseline_scores]
-    print("Saving baseline...")
     save_baseline(baseline_scores)
 
     shifted_scores = [random.gauss(5.5, 2.0) for _ in range(1000)]
     shifted_scores = [max(0.0, min(10.0, s)) for s in shifted_scores]
-    print("Checking drift on shifted distribution...")
-    result = check_drift(shifted_scores)
-    print(json.dumps(result, indent=2))
+    log.info("drift_smoke_test", extra={"result": check_drift(shifted_scores)})

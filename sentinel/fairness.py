@@ -35,10 +35,17 @@ Hard-blocks production deployment if any group fails the four-fifths rule
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .config import DATA
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+log = logging.getLogger("sentinel.fairness")
 
 FAIRNESS_DIR = DATA / "fairness"
 ALERTS_FILE = FAIRNESS_DIR / "alerts.jsonl"
@@ -236,7 +243,7 @@ def check_fairness(
 # DataFrame convenience wrapper
 # ---------------------------------------------------------------------------
 
-def run_fairness_check(scored_df, score_col: str = "score") -> dict:
+def run_fairness_check(scored_df: pd.DataFrame, score_col: str = "score") -> dict:
     """
     Accept a pandas DataFrame with score, device_tier, geography columns.
     Adds is_critical flag and runs the fairness check.
@@ -248,8 +255,13 @@ def run_fairness_check(scored_df, score_col: str = "score") -> dict:
     records = df[["is_critical", "device_tier", "geography"]].to_dict(orient="records")
     report = check_fairness(records)
 
-    status = "FAIL" if report["any_failures"] else "PASS"
-    print(f"[fairness] overall_rate={report['overall_rate']:.1%} status={status}")
+    log.info(
+        "fairness_check",
+        extra={
+            "overall_rate": report["overall_rate"],
+            "status": "FAIL" if report["any_failures"] else "PASS",
+        },
+    )
 
     if report["block_pipeline"]:
         raise RuntimeError(
@@ -262,6 +274,10 @@ def run_fairness_check(scored_df, score_col: str = "score") -> dict:
 
 if __name__ == "__main__":
     import random
+
+    from .logger import configure_logging
+
+    configure_logging()
     random.seed(42)
     groups = ["older_android", "newer_android", "ios"]
     geos = ["north", "south", "east", "west"]
@@ -277,11 +293,14 @@ if __name__ == "__main__":
             "is_critical": random.random() < base_rate,
         })
     report = check_fairness(records)
-    print(json.dumps({
-        "any_failures": report["any_failures"],
-        "recommended_action": report["recommended_action"],
-        "dimensions_summary": {
-            col: {g: v["four_fifths"] for g, v in dim.items()}
-            for col, dim in report["dimensions"].items()
+    log.info(
+        "fairness_smoke_test",
+        extra={
+            "any_failures": report["any_failures"],
+            "recommended_action": report["recommended_action"],
+            "dimensions_summary": {
+                col: {g: v["four_fifths"] for g, v in dim.items()}
+                for col, dim in report["dimensions"].items()
+            },
         },
-    }, indent=2))
+    )

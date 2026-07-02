@@ -67,7 +67,7 @@ def load_labels(path: Path | None = None) -> list[dict[str, object]]:
 
 def label_counts(labels: list[dict[str, object]] | None = None) -> dict[str, int]:
     """Count each supported disposition."""
-    counts = {value: 0 for value in VALID_DISPOSITIONS}
+    counts = dict.fromkeys(VALID_DISPOSITIONS, 0)
     for record in labels if labels is not None else load_labels():
         value = str(record.get("disposition", ""))
         if value in counts:

@@ -17,12 +17,38 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+extend-exclude = ["notebooks"]
 
 [tool.ruff.lint]
-select = ["F", "I"]
+select = ["E", "W", "F", "I", "B", "N", "UP", "SIM", "C4", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# IEEE-CIS columns (TransactionAmt, C1, V258...) force non-snake_case names.
+"sentinel/schema.py" = ["N815"]
+# X (sklearn design-matrix convention) and G (networkx graph convention).
+"sentinel/model.py" = ["N806"]
+"sentinel/graph.py" = ["N806"]
 
 [tool.mypy]
 python_version = "3.10"
-ignore_missing_imports = true
 check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
 exclude = ["notebooks"]
+
+[[tool.mypy.overrides]]
+module = "sentinel.*"
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "duckdb.*",
+    "networkx.*",
+    "pandas.*",
+    "requests.*",
+    "shap.*",
+    "sklearn.*",
+    "tenacity.*",
+    "xgboost.*",
+]
+ignore_missing_imports = true

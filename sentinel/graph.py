@@ -58,7 +58,11 @@ def detect_rings(
         if len(entity_types) < min_shared_entity_types:
             continue
         infrastructure = next(
-            (entity for entity in signature if graph.nodes[entity].get("kind") in {"device", "bank"}),
+            (
+                entity
+                for entity in signature
+                if graph.nodes[entity].get("kind") in {"device", "bank"}
+            ),
             None,
         )
         if infrastructure is None:
@@ -166,7 +170,9 @@ def build_graph(min_ring_size: int = 2) -> pd.DataFrame:
     return result
 
 
-def get_ring_flags(driver_ids, graph_csv=None) -> tuple[pd.Series, pd.Series]:
+def get_ring_flags(
+    driver_ids: pd.Series | list[str], graph_csv: Path | None = None
+) -> tuple[pd.Series, pd.Series]:
     """Return graph flags and ring sizes aligned to the supplied driver IDs."""
     path = Path(graph_csv) if graph_csv else GRAPH / "fraud_rings.csv"
     if path.exists() and path.stat().st_size:

@@ -66,7 +66,7 @@ class SentinelModel:
     # sufficient labeled operational cases, then recalibrate IF contamination.
     XGB_FEATURES = XGB_FEATURES
 
-    def __init__(self, random_state: int = 42):
+    def __init__(self, random_state: int = 42) -> None:
         self.random_state = random_state
         self.xgb = XGBClassifier(
             n_estimators=180, max_depth=5, learning_rate=0.08, subsample=0.85,
@@ -75,16 +75,20 @@ class SentinelModel:
         self.iforest = IsolationForestDetector(random_state=random_state)
         self.metrics: dict[str, float | int] = {}
 
-    def _matrix(self, df):
+    def _matrix(self, df: pd.DataFrame) -> pd.DataFrame:
         featured = build_behavioral_features(df)
-        return featured[self.XGB_FEATURES].replace([np.inf, -np.inf], np.nan).fillna(-999).astype(float)
+        matrix = featured[self.XGB_FEATURES].replace([np.inf, -np.inf], np.nan)
+        return matrix.fillna(-999).astype(float)
 
-    def fit(self, df, y, metrics_path: Path | None = None):
+    def fit(
+        self, df: pd.DataFrame, y: pd.Series, metrics_path: Path | None = None
+    ) -> SentinelModel:
         X = self._matrix(df)
         train_idx, test_idx = train_test_split(
             np.arange(len(X)), test_size=0.25, stratify=y, random_state=self.random_state
         )
-        ratio = max(1.0, (len(train_idx) - y.iloc[train_idx].sum()) / max(1, y.iloc[train_idx].sum()))
+        positives = max(1, y.iloc[train_idx].sum())
+        ratio = max(1.0, (len(train_idx) - y.iloc[train_idx].sum()) / positives)
         self.xgb.set_params(scale_pos_weight=ratio)
         self.xgb.fit(X.iloc[train_idx], y.iloc[train_idx])
         self.iforest.fit(X.iloc[train_idx])
@@ -92,7 +96,7 @@ class SentinelModel:
         self.metrics = {
             "auc_roc": float(roc_auc_score(y.iloc[test_idx], prob)),
             "auc_pr": float(average_precision_score(y.iloc[test_idx], prob)),
-            "rows": int(len(df)),
+            "rows": len(df),
             "fraud_rate": float(y.mean()),
         }
         target = metrics_path or (MODELS / "metrics.json")
@@ -102,7 +106,13 @@ class SentinelModel:
         target.write_text(json.dumps(self.metrics, indent=2), encoding="utf-8")
         return self
 
-    def predict(self, df, graph_flags, ring_sizes, sql_hits):
+    def predict(
+        self,
+        df: pd.DataFrame,
+        graph_flags: pd.Series | np.ndarray,
+        ring_sizes: pd.Series | np.ndarray,
+        sql_hits: pd.Series | np.ndarray,
+    ) -> pd.DataFrame:
         X = self._matrix(df)
         xgb_prob = self.xgb.predict_proba(X)[:, 1]
         if_score = self.iforest.predict_score(X)
@@ -136,12 +146,12 @@ class SentinelModel:
                 "fatal_evidence": fatal_evidence,
                 "band": [
                     risk_band_router(int(value), bool(fatal))
-                    for value, fatal in zip(score, is_fatal)
+                    for value, fatal in zip(score, is_fatal, strict=True)
                 ],
             }
         )
 
-    def explain(self, df, top_n: int = 5):
+    def explain(self, df: pd.DataFrame, top_n: int = 5) -> pd.DataFrame:
         X = self._matrix(df)
         contributions = self.xgb.get_booster().predict(xgb.DMatrix(X), pred_contribs=True)[:, :-1]
         rows = []
@@ -160,13 +170,14 @@ class SentinelModel:
         return pd.DataFrame(rows)
 
 
-def main():
+def main() -> None:
     from .config import SILVER
     from .db import get_connection, get_scored_inputs
 
     df = pd.read_parquet(SILVER / "spark_driver_trips.parquet")
+    # Exercises the full input bridge even though fit only needs the frame.
     with get_connection() as con:
-        graph_flags, ring_sizes, sql_hits = get_scored_inputs(con, df)
+        _graph_flags, _ring_sizes, _sql_hits = get_scored_inputs(con, df)
     model = SentinelModel().fit(df, df["isFraud"].astype(int))
     print(json.dumps(model.metrics, indent=2))
 
