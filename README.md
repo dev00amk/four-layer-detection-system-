@@ -34,6 +34,7 @@ preventive product controls and the scenario-based preventable-loss model.
 - [Run the end-to-end demo](docs/DEMO_WALKTHROUGH.md)
 - [Review the preventable-loss and ROI model](docs/BUSINESS_IMPACT.md)
 - [Inspect the canonical coordinated-ring case](cases/CASE_001.md)
+- [Map role requirements to repository evidence](https://dev00amk.github.io/four-layer-detection-system-/#skills)
 
 > Multi-layer behavioral detection, structured OSINT enrichment, and investigator-ready case management engineered for auditability, false-positive control, and legal defensibility across crowdsourced logistics and gig-economy platforms.
 

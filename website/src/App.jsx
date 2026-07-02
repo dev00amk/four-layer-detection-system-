@@ -41,6 +41,101 @@ const capabilities = [
   ["12K", "synthetic demo rows"],
 ];
 
+const skillGroups = [
+  {
+    id: "01",
+    label: "Detection",
+    heading: "Fraud detection & behavioral analysis",
+    summary: "Turns mixed platform telemetry into reviewable risk hypotheses without collapsing anomaly into guilt.",
+    items: [
+      {
+        skill: "Behavioral segmentation, trend analysis, and anomaly detection",
+        proof: "7-, 30-, and 90-day behavioral windows, trend deltas, Isolation Forest, and exploratory correlation analysis.",
+        href: `${repoUrl}/blob/main/sentinel/features.py`,
+      },
+      {
+        skill: "Mixed-signal risk interpretation",
+        proof: "GPS, device, payout, metadata, model, and graph evidence converge in one bounded composite score.",
+        href: `${repoUrl}/blob/main/docs/DEPARTMENT_CORE_MANDATE.md`,
+      },
+      {
+        skill: "Context-aware false-positive control",
+        proof: "Legitimate GPS drift, carrier NAT, power-user behavior, and shared-household scenarios are documented as exclusions.",
+        href: `${repoUrl}/blob/main/docs/FAILURE_MODE_ANALYSIS.md`,
+      },
+    ],
+  },
+  {
+    id: "02",
+    label: "Signals",
+    heading: "Fraud signal development & model support",
+    summary: "Translates attacker opportunity into measurable behavior, testable thresholds, and governed model feedback.",
+    items: [
+      {
+        skill: "SQL signal and composite-rule development",
+        proof: "25 version-controlled DuckDB signals with fraud type, threshold rationale, FP risk, and mitigation.",
+        href: `${repoUrl}/tree/main/sql/signals`,
+      },
+      {
+        skill: "Hypothesis testing and threshold refinement",
+        proof: "Detection strategies define evidence standards, modeled tradeoffs, operational cost, and monitoring plans.",
+        href: `${repoUrl}/blob/main/docs/DETECTION_STRATEGY.md`,
+      },
+      {
+        skill: "Model QA and structured feedback loops",
+        proof: "SHAP explanations, drift and fairness gates, confirmed outcomes, appeals, and retraining feedback are operationalized.",
+        href: `${repoUrl}/blob/main/docs/SIGNAL_PRIORITIZATION.md`,
+      },
+    ],
+  },
+  {
+    id: "03",
+    label: "Investigations",
+    heading: "Investigation & evidence documentation",
+    summary: "Builds a reproducible chain from alert intake to defensible decision, with explicit human review.",
+    items: [
+      {
+        skill: "Structured investigation and case management",
+        proof: "An eight-step SOP and integrity-hashed case files cover intake, exclusions, escalation, decision, and closure.",
+        href: `${repoUrl}/blob/main/docs/INVESTIGATOR_PLAYBOOK.md`,
+      },
+      {
+        skill: "OSINT, identity, device, and geolocation enrichment",
+        proof: "Five structured enrichment families produce step-level audit records; simulation is clearly separated from live vendors.",
+        href: `${repoUrl}/blob/main/sentinel/osint.py`,
+      },
+      {
+        skill: "Adversarial thinking and emerging-vector analysis",
+        proof: "A fraud-technique library maps seven attack techniques to a ten-stage abuse lifecycle and mitigation coverage.",
+        href: `${repoUrl}/blob/main/docs/FRAUD_TECHNIQUES.md`,
+      },
+    ],
+  },
+  {
+    id: "04",
+    label: "Reporting",
+    heading: "Cross-functional collaboration & reporting",
+    summary: "Converts operational evidence into decisions Product, Legal, Compliance, Engineering, and Care can act on.",
+    items: [
+      {
+        skill: "Audience-specific operational briefings",
+        proof: "Separate Product, Legal, Engineering, and Care Operations briefs translate the same case into relevant actions.",
+        href: `${repoUrl}/blob/main/docs/CROSS_FUNCTIONAL_BRIEFING.md`,
+      },
+      {
+        skill: "Product-control and policy requirements",
+        proof: "Detection gaps become step-up verification, payout holds, instrumentation requests, ownership, and monitoring plans.",
+        href: `${repoUrl}/blob/main/docs/OPERATIONAL_RISK.md`,
+      },
+      {
+        skill: "Audit readiness, QA trends, and SOP governance",
+        proof: "Evidence standards, appeals, model validation, analyst QA, decision logs, and review cadence are documented.",
+        href: `${repoUrl}/blob/main/docs/GOVERNANCE.md`,
+      },
+    ],
+  },
+];
+
 function useReveal() {
   useEffect(() => {
     const nodes = document.querySelectorAll("[data-reveal]");
@@ -67,8 +162,10 @@ function useReveal() {
 export function App() {
   const [theme, setTheme] = useState("dark");
   const [activeLayer, setActiveLayer] = useState(0);
+  const [activeSkill, setActiveSkill] = useState(0);
   const [graphOpen, setGraphOpen] = useState(false);
   const active = useMemo(() => layers[activeLayer], [activeLayer]);
+  const selectedSkill = useMemo(() => skillGroups[activeSkill], [activeSkill]);
 
   useReveal();
 
@@ -226,6 +323,64 @@ export function App() {
               <h3>Escalate</h3>
               <p>Queue thresholds, analyst playbooks, appeal paths, and audit logs constrain action.</p>
             </article>
+          </div>
+        </section>
+
+        <section className="section shell skills-section" id="skills" data-reveal>
+          <div className="section-heading-row skills-heading">
+            <div>
+              <p className="section-label">## role_capability_map</p>
+              <h2>Required skills.<br />Repository evidence.</h2>
+            </div>
+            <p className="comment">
+              // Each claim links to a working artifact. Degree and years-of-experience
+              requirements are intentionally not inferred from project code.
+            </p>
+          </div>
+
+          <div className="skills-console">
+            <div className="skill-nav" role="tablist" aria-label="Role capability groups">
+              {skillGroups.map((group, index) => (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeSkill === index}
+                  className={activeSkill === index ? "active" : ""}
+                  onClick={() => setActiveSkill(index)}
+                  key={group.id}
+                >
+                  <span>{group.id}</span>
+                  <strong>{group.label}</strong>
+                </button>
+              ))}
+            </div>
+
+            <div className="skill-panel" role="tabpanel" aria-live="polite">
+              <p className="skill-kicker">essential function / {selectedSkill.id}</p>
+              <h3>{selectedSkill.heading}</h3>
+              <p className="skill-summary">{selectedSkill.summary}</p>
+              <div className="skill-evidence">
+                {selectedSkill.items.map((item) => (
+                  <a href={item.href} target="_blank" rel="noreferrer" key={item.skill}>
+                    <span>demonstrated</span>
+                    <strong>{item.skill}</strong>
+                    <p>{item.proof}</p>
+                    <em>inspect evidence</em>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="tool-belt" aria-label="Demonstrated tools and domains">
+            <span>SQL / DuckDB</span>
+            <span>Python / pandas</span>
+            <span>Isolation Forest</span>
+            <span>XGBoost / SHAP</span>
+            <span>OSINT</span>
+            <span>Entity graphs</span>
+            <span>Case management</span>
+            <span>Dashboard specifications</span>
           </div>
         </section>
 

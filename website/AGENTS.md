@@ -12,3 +12,4 @@ When implementing from a selected generated mock, treat that image as the source
 - Visual reference: Ponytail's terminal-framed, proof-first, monospace landing page; adapt its visual language without copying its identity, writing, mascot, or proprietary assets.
 - Interaction: full, restrained interaction and animated data storytelling with reduced-motion support.
 - Content integrity: use only evidence already present in Project Sentinel, clearly label synthetic/demo data, and retain the statement that this is not a Walmart system.
+- Role alignment: organize competencies around fraud detection, signal development, investigation/evidence, and cross-functional reporting; every claim should link to repository evidence, and biographical qualifications must not be inferred.
