@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +20,13 @@ from .anomaly import (
 )
 from .config import MODELS, ensure_directories
 from .features import BEHAVIORAL_FEATURES, ROLLING_FEATURES, build_behavioral_features
+
+log = logging.getLogger("sentinel.model")
+
+# Sentinel imputation marker for NaN/inf feature values. XGBoost treats it as
+# just another split value; audits need to know when it dominates a column.
+FILL_VALUE = -999
+FILL_WARN_RATE = 0.05
 
 # XGBoost feature matrix: three groups with an explicit production migration path.
 #
@@ -78,7 +86,17 @@ class SentinelModel:
     def _matrix(self, df: pd.DataFrame) -> pd.DataFrame:
         featured = build_behavioral_features(df)
         matrix = featured[self.XGB_FEATURES].replace([np.inf, -np.inf], np.nan)
-        return matrix.fillna(-999).astype(float)
+        fill_rates = matrix.isna().mean()
+        heavy = fill_rates[fill_rates > FILL_WARN_RATE]
+        if not heavy.empty:
+            log.warning(
+                "feature_imputation_heavy",
+                extra={
+                    "fill_value": FILL_VALUE,
+                    "columns": {name: round(rate, 4) for name, rate in heavy.items()},
+                },
+            )
+        return matrix.fillna(FILL_VALUE).astype(float)
 
     def fit(
         self, df: pd.DataFrame, y: pd.Series, metrics_path: Path | None = None

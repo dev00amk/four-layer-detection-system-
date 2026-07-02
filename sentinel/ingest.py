@@ -34,7 +34,9 @@ def ingest(raw_dir: Path = RAW, bronze_dir: Path = BRONZE) -> pd.DataFrame:
         )
     txn, identity = pd.read_csv(txn_path), pd.read_csv(id_path)
     merged = txn.merge(identity, on="TransactionID", how="left", validate="one_to_one")
-    validate_dataframe(merged, BronzeTransaction)
+    # Bounded row sample: full IEEE-CIS is ~590k rows and the column check
+    # plus merge cardinality guard already cover the frame-level contract.
+    validate_dataframe(merged, BronzeTransaction, sample_size=10_000)
     output = bronze_dir / "train_transaction.parquet"
     merged.to_parquet(output, index=False)
     try:

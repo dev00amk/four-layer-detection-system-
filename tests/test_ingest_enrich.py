@@ -10,6 +10,7 @@ from sentinel.demo import generate_demo
 from sentinel.enrich import enrich
 from sentinel.graph import build_graph, get_ring_flags
 from sentinel.ingest import ingest
+from sentinel.schema import SchemaValidationError, validate_trip_invariants
 
 
 def test_ingest_requires_raw_files(tmp_path):
@@ -66,6 +67,42 @@ def test_build_graph_detects_seeded_case001_ring(monkeypatch, pipeline_env, tmp_
     )
     assert len(case_drivers) == 2
     assert case_drivers <= set(rings["driver_id"])
+
+
+def _invariant_frame() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "trip_id": ["T1", "T2"],
+            "driver_id": ["D1", "D2"],
+            "trip_start_ts": pd.to_datetime(["2025-01-01 10:00", "2025-01-01 11:00"]),
+            "trip_end_ts": pd.to_datetime(["2025-01-01 10:30", "2025-01-01 11:30"]),
+        }
+    )
+
+
+def test_trip_invariants_pass_on_clean_frame():
+    validate_trip_invariants(_invariant_frame())
+
+
+def test_trip_invariants_reject_inverted_timestamps():
+    frame = _invariant_frame()
+    frame.loc[0, "trip_end_ts"] = pd.Timestamp("2025-01-01 09:00")
+    with pytest.raises(SchemaValidationError, match="end before they start"):
+        validate_trip_invariants(frame)
+
+
+def test_trip_invariants_reject_duplicate_trip_ids():
+    frame = _invariant_frame()
+    frame.loc[1, "trip_id"] = "T1"
+    with pytest.raises(SchemaValidationError, match="duplicate trip_id"):
+        validate_trip_invariants(frame)
+
+
+def test_trip_invariants_reject_null_driver():
+    frame = _invariant_frame()
+    frame.loc[0, "driver_id"] = None
+    with pytest.raises(SchemaValidationError, match="null driver_id"):
+        validate_trip_invariants(frame)
 
 
 def test_get_ring_flags_with_and_without_csv(tmp_path):

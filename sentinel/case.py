@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from .config import CASES, ensure_directories, settings
+from .exceptions import DataValidationError
 from .logger import set_correlation_id
 from .osint import enrich_driver
 
@@ -35,6 +36,14 @@ def generate_cases_from_scores(
         .drop_duplicates("driver_id")
         .head(limit or settings.max_case_queue)
     )
+    # A populated SHAP frame that shares no rows with the critical queue means
+    # the two inputs came from different scoring runs — evidence would be
+    # silently absent from every case file.
+    if len(critical) and len(shap_df) and not shap_df["row_index"].isin(critical.index).any():
+        raise DataValidationError(
+            "scored/shap misalignment: no critical row has SHAP evidence; "
+            "regenerate both artifacts from the same scoring run"
+        )
     collusion = cross_role_df.set_index("driver_id") if not cross_role_df.empty else pd.DataFrame()
     for row in critical.itertuples():
         set_correlation_id(str(row.driver_id))

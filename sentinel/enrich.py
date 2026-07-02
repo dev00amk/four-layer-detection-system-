@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 
 from .config import BRONZE, SILVER, ensure_directories
-from .schema import EnrichedTrip, validate_dataframe
+from .exceptions import DataValidationError
+from .schema import EnrichedTrip, validate_dataframe, validate_trip_invariants
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +111,12 @@ def enrich(
         .fillna(1)
         .astype(int)
     )
-    validate_dataframe(df, EnrichedTrip)
+    if len(df) != n:
+        raise DataValidationError(
+            f"enrich changed the row count: {n} bronze rows became {len(df)}"
+        )
+    validate_dataframe(df, EnrichedTrip, sample_size=1_000)
+    validate_trip_invariants(df)
     silver_dir.mkdir(parents=True, exist_ok=True)
     output = silver_dir / "spark_driver_trips.parquet"
     df.to_parquet(output, index=False)

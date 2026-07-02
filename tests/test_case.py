@@ -5,8 +5,10 @@ import hashlib
 import re
 
 import pandas as pd
+import pytest
 
 from sentinel.case import generate_cases_from_scores
+from sentinel.exceptions import DataValidationError
 
 CROSS_ROLE_EMPTY = pd.DataFrame(
     columns=["driver_id", "collusion_signal_count", "collusion_flag"]
@@ -123,3 +125,11 @@ def test_duplicate_drivers_deduplicated(tmp_path):
         scored, _shap_frame(scored), CROSS_ROLE_EMPTY, output_dir=tmp_path
     )
     assert count == 2
+
+
+def test_misaligned_shap_frame_rejected(tmp_path):
+    scored = _scored_frame(n_critical=2)
+    shap = _shap_frame(scored)
+    shap["row_index"] += 10_000  # indexes from a different scoring run
+    with pytest.raises(DataValidationError, match="misalignment"):
+        generate_cases_from_scores(scored, shap, CROSS_ROLE_EMPTY, output_dir=tmp_path)
