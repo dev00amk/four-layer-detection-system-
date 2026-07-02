@@ -47,10 +47,10 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r requirements.txt bandit pip-audit
+      - run: pip install -r requirements.txt
       # Static security lint on first-party code: medium severity and above.
       - run: bandit -r sentinel run.py -ll
-      # Known-CVE scan of pinned dependencies. Advisory until the dependency
-      # set has one clean run, then drop continue-on-error to enforce.
-      - run: pip-audit -r requirements.txt
+      # Known-CVE scan of the installed environment. Advisory until the
+      # dependency set has one clean run, then drop continue-on-error.
+      - run: pip-audit --skip-editable
         continue-on-error: true
