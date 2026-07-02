@@ -10,6 +10,9 @@
 > **Status:** Operational template. All thresholds and SLAs marked
 > [TO BE SET BY PROGRAM OWNER] require calibration to live platform data.
 
+For a credential-free tour of the generated artifacts and the fully rendered
+CASE_001 investigation flow, see [`DEMO_WALKTHROUGH.md`](DEMO_WALKTHROUGH.md).
+
 ***
 
 ## Investigator Principles
