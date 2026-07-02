@@ -1,6 +1,6 @@
 {
   "auc_roc": 1.0,
   "auc_pr": 1.0,
-  "rows": 12000,
-  "fraud_rate": 0.03383333333333333
+  "rows": 4000,
+  "fraud_rate": 0.0315
 }

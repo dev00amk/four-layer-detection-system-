@@ -229,9 +229,9 @@ def check_fairness(
 # DataFrame convenience wrapper
 # ---------------------------------------------------------------------------
 
-def run_fairness_check(scored_df, score_col: str = "composite_score") -> dict:
+def run_fairness_check(scored_df, score_col: str = "score") -> dict:
     """
-    Accept a pandas DataFrame with composite_score, device_tier, geography columns.
+    Accept a pandas DataFrame with score, device_tier, geography columns.
     Adds is_critical flag and runs the fairness check.
     Raises RuntimeError if BLOCK_ON_FAILURE and failures found.
     """

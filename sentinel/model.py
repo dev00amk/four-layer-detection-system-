@@ -161,8 +161,8 @@ def main():
     from .db import get_connection, get_scored_inputs
 
     df = pd.read_parquet(SILVER / "spark_driver_trips.parquet")
-    con = get_connection()
-    graph_flags, ring_sizes, sql_hits = get_scored_inputs(con, df)
+    with get_connection() as con:
+        graph_flags, ring_sizes, sql_hits = get_scored_inputs(con, df)
     model = SentinelModel().fit(df, df["isFraud"].astype(int))
     print(json.dumps(model.metrics, indent=2))
 

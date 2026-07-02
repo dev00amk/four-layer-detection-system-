@@ -227,12 +227,10 @@ CRITICAL and CRITICAL+ contractors generate pre-populated Markdown case files co
 
 ```json
 {
-  "val_roc_auc": 0.847,
-  "val_avg_precision": 0.763,
-  "fraud_rate": 0.035,
-  "rows_scored": 12000,
-  "critical_cases_generated": 12,
-  "note": "demo dataset — see README for IEEE-CIS benchmark target"
+  "auc_roc": 0.847,
+  "auc_pr": 0.763,
+  "rows": 12000,
+  "fraud_rate": 0.035
 }
 ```
 

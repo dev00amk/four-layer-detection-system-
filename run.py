@@ -50,9 +50,9 @@ def demo_command(rows: int, seed: int) -> None:
 def score_command() -> None:
     _require(SILVER / "spark_driver_trips.parquet")
     build_graph()
-    con = get_connection()
     df = pd.read_parquet(SILVER / "spark_driver_trips.parquet")
-    graph_flags, ring_sizes, sql_hits = get_scored_inputs(con, df, GRAPH / "fraud_rings.csv")
+    with get_connection() as con:
+        graph_flags, ring_sizes, sql_hits = get_scored_inputs(con, df, GRAPH / "fraud_rings.csv")
     model = SentinelModel().fit(df, df["isFraud"].astype(int))
     scored = model.predict(df, graph_flags, ring_sizes, sql_hits)
     explanations = model.explain(df)
@@ -65,10 +65,12 @@ def score_command() -> None:
 def cases_command() -> None:
     scored_path, shap_path = GOLD / "scored_trips.parquet", GOLD / "shap_explanations.parquet"
     _require(scored_path, shap_path, SILVER / "spark_driver_trips.parquet")
+    with get_connection() as con:
+        cross_role_df = get_cross_role_df(con)
     count = generate_cases_from_scores(
         pd.read_parquet(scored_path),
         pd.read_parquet(shap_path),
-        get_cross_role_df(get_connection()),
+        cross_role_df,
     )
     log.info("case_summary", extra={"cases_generated": count})
 

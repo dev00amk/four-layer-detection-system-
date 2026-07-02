@@ -7,8 +7,8 @@ or a population change in the contractor cohort.
 
 Uses Population Stability Index (PSI) as the primary drift metric.
 PSI < 0.10  -- no significant shift (stable)
-PSI 0.10-0.25 -- moderate shift (monitor, consider recalibration)
-PSI > 0.25  -- significant shift (alert, flag for investigation)
+PSI 0.10-0.20 -- moderate shift (monitor, consider recalibration)
+PSI > 0.20  -- significant shift (alert, flag for investigation)
 
 Additionally tracks:
 - Mean and standard deviation of composite scores (run-over-run)
@@ -27,13 +27,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
+from .config import settings
+
 DRIFT_DIR = Path("data/drift")
 BASELINE_FILE = DRIFT_DIR / "baseline.json"
 ALERTS_FILE = DRIFT_DIR / "alerts.jsonl"
 
-# PSI thresholds
+# PSI thresholds. PSI_ALERT is single-sourced from settings.psi_threshold so the
+# governance config and the live drift check can never disagree.
 PSI_MONITOR = 0.10
-PSI_ALERT = 0.25
+PSI_ALERT = settings.psi_threshold
 
 # Risk band boundaries (composite score 0-10)
 BAND_BOUNDARIES = [0.0, 3.0, 5.0, 7.0, 10.01]
@@ -212,7 +215,7 @@ def check_drift(
 # Convenience wrapper for run.py integration
 # ---------------------------------------------------------------------------
 
-def run_drift_check(scored_df, score_col: str = "composite_score") -> dict:
+def run_drift_check(scored_df, score_col: str = "score") -> dict:
     """
     Accept a pandas/polars DataFrame and run drift check.
     Returns drift result dict. Call after ensemble scoring in run.py.

@@ -13,6 +13,9 @@ def get_connection(read_only: bool = False) -> duckdb.DuckDBPyConnection:
     if not silver.exists():
         raise FileNotFoundError("Silver data missing. Run demo, ingest, and enrich first.")
     con = duckdb.connect(str(GOLD / "sentinel.duckdb"), read_only=read_only)
+    # DuckDB does not support prepared-statement parameters inside DDL (CREATE VIEW),
+    # so the path must be inlined. It is not attacker-controlled (fixed local config
+    # path, never user input); standard SQL single-quote escaping is sufficient here.
     path = silver.as_posix().replace("'", "''")
     con.execute(f"CREATE OR REPLACE VIEW spark_trips AS SELECT * FROM read_parquet('{path}')")
     con.execute(
