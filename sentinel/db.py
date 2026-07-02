@@ -22,7 +22,10 @@ def get_connection(read_only: bool = False) -> duckdb.DuckDBPyConnection:
     # so the path must be inlined. It is not attacker-controlled (fixed local config
     # path, never user input); standard SQL single-quote escaping is sufficient here.
     path = silver.as_posix().replace("'", "''")
-    con.execute(f"CREATE OR REPLACE VIEW spark_trips AS SELECT * FROM read_parquet('{path}')")
+    con.execute(
+        # nosec B608 - path is fixed local config, quote-escaped; DDL cannot take params
+        f"CREATE OR REPLACE VIEW spark_trips AS SELECT * FROM read_parquet('{path}')"  # nosec B608
+    )
     con.execute(
         """
         CREATE OR REPLACE MACRO haversine_km(lat1, lon1, lat2, lon2) AS

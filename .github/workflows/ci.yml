@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,5 +31,26 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: pip install -r requirements.txt
-      - run: pytest
+      - run: pytest --cov-report=xml
+      - uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.11'
+        with:
+          name: coverage-report
+          path: coverage.xml
       - run: python run.py full --rows 3000
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt bandit pip-audit
+      # Static security lint on first-party code: medium severity and above.
+      - run: bandit -r sentinel run.py -ll
+      # Known-CVE scan of pinned dependencies. Advisory until the dependency
+      # set has one clean run, then drop continue-on-error to enforce.
+      - run: pip-audit -r requirements.txt
+        continue-on-error: true
