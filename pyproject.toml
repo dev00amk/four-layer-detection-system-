@@ -37,6 +37,9 @@ api = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.30,<1", "httpx>=0.27,<1"]
 [project.scripts]
 sentinel = "sentinel.cli:main"
 
+[tool.setuptools.packages.find]
+include = ["sentinel*", "service*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --cov=sentinel --cov-report=term-missing --cov-report=xml --cov-fail-under=75"
