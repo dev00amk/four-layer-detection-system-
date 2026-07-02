@@ -17,7 +17,7 @@ __pycache__/
 .env
 .venv/
 cases/CASE_D*.md
-.codex-pytest-temp/
+.*-pytest-temp/
 website/node_modules/
 website/dist/
 website/.npm-cache/

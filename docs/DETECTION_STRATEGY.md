@@ -92,10 +92,9 @@ at scale with no physical effort.
 - Single impossible transit + any corroborating signal → Critical confidence.
 - Three or more geofence misses in one shift → High confidence.
 
-**Expected precision:** 85–92% on Fatal-tier alerts (modeled assumption).
-
-**Expected recall:** 58–65% (GPS spoofing is detectable but sophisticated operators
-rotate techniques; recall improves with ensemble + graph layer).
+**Portfolio validation status:** Precision and recall are not estimated from the synthetic
+demo. Production targets require representative labeled outcomes, temporal holdout testing,
+and post-investigation dispositions.
 
 **False positive risk:** Low. Legitimate GPS edge cases (tunnels, parking structures,
 rural areas) produce isolated anomalies, not clusters. Corroboration requirement
@@ -104,23 +103,17 @@ reduces FP rate significantly.
 **FP mitigation:** Require two corroborating signals before escalation. Cross-reference
 delivery photo timestamp. Check customer-side GPS confirmation if available.
 
-**Operational cost (modeled):**
-- Alert volume: ~420 per day at current signal thresholds.
-- Investigator time: 12 minutes per CRITICAL case.
-- Monthly investigator cost: ~$18,000 (assuming fully loaded analyst rate).
-
-**Fraud prevented (modeled):**
-- Precision 88% × 420 alerts × avg fraud loss per trip = ~$146,000/month.
-- Net ROI: 8.1× on investigator investment.
+**Operational planning inputs:** Measure alert volume, median handling time, confirmed-loss
+amount, and false-positive rate during a controlled pilot. No portfolio estimate is presented
+as an observed operating result.
 
 **Product control recommendation:**
 - Require device attestation (e.g., Play Integrity API / Apple DeviceCheck) at delivery
   confirmation for drivers with two or more geofence anomalies.
 - Product team owner: Platform Integrity Engineering.
 - Engineering effort: Medium.
-- Expected fraud reduction: 25–35% of GPS spoofing incidents.
-- FP impact: Estimated 2% increase in friction for legitimate drivers; mitigated by
-  fast-track appeal process.
+- Measure change in confirmed spoofing rate and legitimate-driver friction during a
+  controlled rollout with a fast-track appeal process.
 
 **Monitoring plan:**
 - Weekly spoof rate by region and device type.
@@ -154,8 +147,8 @@ the earning fairness for legitimate drivers and inflates incentive program costs
 - Signal 07 + Signal 03 → Critical confidence.
 - All four signals → Fatal; escalate immediately.
 
-**Expected precision:** 76–84% (modeled).
-**Expected recall:** 52–60% (bot operators rotate acceptance timing to evade detection).
+**Portfolio validation status:** Precision and recall are not estimated from the synthetic
+demo. Validate against adjudicated sessions and time-based holdout cohorts.
 
 **False positive risk:** Medium. Power users and experienced drivers have genuinely
 fast acceptance times. Cohort benchmarking is essential to reduce FP rate.
@@ -165,14 +158,8 @@ fast acceptance times. Cohort benchmarking is essential to reduce FP rate.
 - Require incentive anomaly co-signal before escalation.
 - Check device state; legitimate fast drivers rarely use developer/emulator configurations.
 
-**Operational cost (modeled):**
-- Alert volume: ~180 per day.
-- Investigator time: 15 minutes per case (more complex; requires session replay).
-- Monthly investigator cost: ~$11,700.
-
-**Fraud prevented (modeled):**
-- Precision 80% × 180 alerts × avg incentive fraud loss = ~$62,000/month.
-- Net ROI: 5.3×.
+**Operational planning inputs:** Measure alert volume, session-review time, confirmed
+incentive loss, and legitimate power-user escalation rate during a pilot.
 
 **Product control recommendation:**
 - Introduce randomized latency window for offer presentation to neutralize automation
@@ -214,10 +201,9 @@ Professional fraud rings cause disproportionate loss per investigation hour.
 - Shared device + shared payout → Critical; 1.4× ring multiplier applied to ensemble.
 - Confirmed ring of 3+ accounts → Fatal; 1.5× multiplier; all members escalated.
 
-**Expected precision:** 91–95% on confirmed ring alerts (graph layer dramatically
-improves precision vs account-level signals alone).
-**Expected recall:** 45–55% (sophisticated rings rotate shared identifiers; recall
-improves with OSINT enrichment and velocity monitoring).
+**Portfolio validation status:** Precision and recall are not estimated from the synthetic
+demo. Validate ring decisions against adjudicated linked-account cases and identity-review
+outcomes.
 
 **False positive risk:** Low for device+payout signals. Higher for IP-only signals
 (carrier NAT creates legitimate shared IPs). IP signal classified as Warning tier.
@@ -227,15 +213,8 @@ improves with OSINT enrichment and velocity monitoring).
 - Require two independent shared identifiers before ring flag.
 - OSINT address verification cross-check for all ring members before adverse action.
 
-**Operational cost (modeled):**
-- Alert volume: ~55 ring alerts per day.
-- Investigator time: 30 minutes per ring case (higher complexity; multiple accounts).
-- Monthly investigator cost: ~$11,000.
-
-**Fraud prevented (modeled):**
-- Rings generate 3–8× average fraud loss per account vs solo operators.
-- Precision 92% × 55 alerts × avg ring fraud loss = ~$198,000/month.
-- Net ROI: 18×.
+**Operational planning inputs:** Measure unique rings, accounts per ring, investigation time,
+confirmed linked loss, and false linkage caused by shared household or carrier infrastructure.
 
 **Product control recommendation:**
 - Device binding at onboarding: one active contractor account per device.
@@ -274,9 +253,8 @@ moment of highest financial exposure in the delivery lifecycle.
 - Payout change within 24h of settlement + new device → Fatal; immediate payout hold.
 - Payout change alone → High; queue for verification before release.
 
-**Expected precision:** 79–87% (modeled).
-**Expected recall:** 71–78% (most ATO payout redirections are time-sensitive and leave
-detectable velocity signatures).
+**Portfolio validation status:** Precision and recall are not estimated from the synthetic
+demo. Validate against confirmed account-takeover and legitimate payout-change outcomes.
 
 **False positive risk:** Medium. Legitimate contractors occasionally update payout
 accounts around settlement dates. Verification callback reduces FP rate significantly.
@@ -286,14 +264,8 @@ accounts around settlement dates. Verification callback reduces FP rate signific
 - 24h hold with fast-track verification option for legitimate changes.
 - Appeal path documented in contractor terms.
 
-**Operational cost (modeled):**
-- Alert volume: ~65 per day.
-- Investigator time: 10 minutes per case (binary decision: verify or hold).
-- Monthly investigator cost: ~$4,200.
-
-**Fraud prevented (modeled):**
-- Precision 83% × 65 alerts × avg payout fraud loss = ~$89,000/month.
-- Net ROI: 21×.
+**Operational planning inputs:** Measure payout-change volume, verification completion,
+hold duration, confirmed prevented loss, and legitimate-contractor friction.
 
 **Product control recommendation:**
 - Mandatory 24h cooling period for payout account changes.
@@ -330,22 +302,15 @@ because the attacker controls the completion event.
 - GPS non-arrival + photo timestamp inconsistency → Fatal; immediate case generation.
 - 3+ claims on same pair → High; investigation queue.
 
-**Expected precision:** 81–89% (photo metadata is hard to spoof and creates strong signal).
-**Expected recall:** 49–58% (sophisticated operators delete metadata; recall improves with
-GPS corroboration layer).
+**Portfolio validation status:** Precision and recall are not estimated from the synthetic
+demo. Validate against adjudicated delivery claims with source-photo and location evidence.
 
 **FP mitigation:**
 - Photo metadata may be stripped by legitimate privacy tools; require GPS corroboration.
 - Customer collusion requires pattern, not single incident.
 
-**Operational cost (modeled):**
-- Alert volume: ~90 per day.
-- Investigator time: 18 minutes per case.
-- Monthly investigator cost: ~$8,800.
-
-**Fraud prevented (modeled):**
-- Precision 85% × 90 alerts × avg fake delivery loss = ~$77,000/month.
-- Net ROI: 8.8×.
+**Operational planning inputs:** Measure claim volume, source-evidence availability,
+investigation time, confirmed delivery loss, and customer-collusion outcomes.
 
 **Product control recommendation:**
 - Geofence-locked delivery confirmation: completion photo only accepted within delivery
@@ -359,19 +324,18 @@ GPS corroboration layer).
 
 ***
 
-## Aggregate Economics Summary
+## Production Economics Measurement Plan
 
-| Signal Family | Daily Alerts | Precision | Monthly Cost | Monthly Prevention | ROI |
-|--------------|-------------|-----------|-------------|-------------------|-----|
-| GPS Spoofing | 420 | 88% | $18,000 | $146,000 | 8.1× |
-| Bot/Incentive | 180 | 80% | $11,700 | $62,000 | 5.3× |
-| Ring Detection | 55 | 92% | $11,000 | $198,000 | 18× |
-| Payout Redirect | 65 | 83% | $4,200 | $89,000 | 21× |
-| Fake Delivery | 90 | 85% | $8,800 | $77,000 | 8.8× |
-| **Total** | **810** | **86% blended** | **$53,700** | **$572,000** | **10.7×** |
+| Signal family | Volume measure | Quality measure | Cost measure | Outcome measure |
+|---|---|---|---|---|
+| GPS spoofing | Alerts and unique drivers | Confirmed-alert precision | Review and appeal time | Confirmed loss prevented |
+| Bot/incentive | Sessions and unique devices | Adjudicated precision | Session-review time | Incentive leakage prevented |
+| Ring detection | Rings and linked accounts | Confirmed-link precision | Multi-account review time | Linked loss prevented |
+| Payout redirect | Changes and holds | ATO confirmation rate | Verification and hold cost | Payout loss prevented |
+| Fake delivery | Claims and driver-customer pairs | Confirmed-claim precision | Evidence-review time | Delivery loss prevented |
 
-> **Note:** All values are modeled assumptions using synthetic telemetry scenario analysis.
-> Production calibration against live platform data required before operational use.
+ROI should be calculated only after these measures are observed in a controlled pilot:
+`(confirmed loss prevented - operating cost) / operating cost`.
 
 ***
 

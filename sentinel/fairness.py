@@ -96,7 +96,7 @@ def _four_fifths_test(rates: dict[str, dict]) -> dict[str, dict]:
         if v["rate"] is None:
             results[g] = {**v, "four_fifths": "skip", "ratio": None}
             continue
-        ratio = v["rate"] / best_rate if best_rate > 0 else None
+        ratio = best_rate / v["rate"] if v["rate"] > 0 else None
         passed = (ratio is None) or (ratio >= FOUR_FIFTHS_THRESHOLD)
         results[g] = {**v, "four_fifths": "pass" if passed else "FAIL", "ratio": ratio}
 

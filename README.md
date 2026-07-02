@@ -2,18 +2,19 @@
 
 [Explore the interactive portfolio](https://dev00amk.github.io/four-layer-detection-system-/) · [Run the demo](docs/DEMO_WALKTHROUGH.md) · [Inspect CASE_001](cases/CASE_001.md)
 
-Portfolio implementation of Spark Driver fraud detection operations: multi-layer behavioral detection, structured OSINT enrichment, and investigator-ready case management designed for auditability, false-positive control, and legal defensibility.
+Portfolio implementation of last-mile fraud analytics: behavioral signals, anomaly detection,
+entity analysis, structured enrichment, and reviewable case documentation.
 
 ## Executive summary
 
-Project Sentinel turns last-mile delivery telemetry into prioritized, audit-ready fraud cases.
+Project Sentinel turns last-mile delivery telemetry into prioritized fraud-review cases.
 It combines four detection layers: 25 explainable SQL signals, Isolation Forest anomaly
 detection, XGBoost with SHAP explanations, and a shared-entity graph. Together they address
 six fraud families: GPS spoofing, bot-assisted offer grabbing, coordinated rings, incentive
 abuse, account takeover and payout mules, and refund or delivery fraud. Run the complete
 credential-free demonstration with `python run.py full`. Sentinel is a trust decision system,
-not just a detector: it connects evidence, scoring, investigator review, product controls,
-and measurable loss prevention. Validation uses IEEE-CIS data plus clearly labeled,
+It connects evidence, scoring, investigator review, and proposed product controls.
+Validation uses IEEE-CIS data plus clearly labeled,
 deterministic synthetic delivery telemetry; production use requires recalibration on labeled
 operational data.
 
@@ -36,9 +37,14 @@ preventive product controls and the scenario-based preventable-loss model.
 - [Inspect the canonical coordinated-ring case](cases/CASE_001.md)
 - [Map role requirements to repository evidence](https://dev00amk.github.io/four-layer-detection-system-/#skills)
 
-> Multi-layer behavioral detection, structured OSINT enrichment, and investigator-ready case management engineered for auditability, false-positive control, and legal defensibility across crowdsourced logistics and gig-economy platforms.
+> A reproducible portfolio study of mixed-signal fraud analysis, false-positive controls,
+> structured investigation, and cross-functional reporting.
 
-Sentinel converts raw Last-Mile Delivery (LMD) contractor telemetry into prioritised, audit-ready fraud cases — detecting GPS spoofing rings, bot-assisted offer grabbing, and coordinated payout abuse before settlement, while producing evidence packs that hold up to legal review and appeal. Every adverse action is traceable from raw event to investigator decision. Every signal documents its false-positive risk. Every queued CRITICAL-band output generates a case file that can be handed directly to Legal without further preparation.
+Sentinel converts synthetic Last-Mile Delivery (LMD) telemetry into prioritized review cases
+for GPS spoofing, bot-assisted offer grabbing, coordinated rings, payout abuse, and related
+patterns. Generated case files preserve the evidence used by the demo and provide a starting
+point for analyst, Legal, or Compliance review. They are not substitutes for production
+investigation records or legal conclusions.
 
 > This is a portfolio/reference implementation built on the public IEEE-CIS fraud dataset plus clearly labelled, deterministic synthetic delivery telemetry, representative of gig-economy contractor operations.
 
@@ -54,7 +60,7 @@ Sentinel is engineered around five enterprise risk outcomes common to last-mile 
 | **False-Positive Control** | Every signal documents FP risk, mitigation rationale, and threshold justification; four structured FP exclusion paths require analyst sign-off before any adverse action is taken — protecting contractor fairness and reducing wrongful-deactivation liability | `sql/signals/` headers, `sentinel/case.py` |
 | **Queue Prioritisation** | 25-case cap per run models realistic investigator capacity; CRITICAL and CRITICAL+ cases are auto-generated with pre-filled evidence, enabling time-to-action optimisation and workload governance | `sentinel/case.py`, `cases/` |
 | **OSINT & Identity Verification** | Five-step structured OSINT enrichment (identity document, device intelligence, address type, account resale, contractor presence) produces audit-hashed, step-level evidence embedded directly in each case file | `sentinel/osint.py` |
-| **Governance & Traceability** | Immutable bronze-layer storage, SHA-256 lineage chains, version-controlled signal library, and integrity-hashed Markdown case files ensure every adverse action is fully traceable and legally defensible from raw event through investigator decision | `sentinel/ingest.py`, `data/bronze/lineage.json` |
+| **Governance & Traceability** | Bronze-layer checksums, version-controlled signals, and integrity-hashed Markdown case files preserve the demo's evidence path from raw event through reviewer decision | `sentinel/ingest.py`, `data/bronze/lineage.json` |
 
 ---
 
@@ -84,7 +90,9 @@ Sentinel is engineered around five enterprise risk outcomes common to last-mile 
 
 ## Core Enterprise Capabilities
 
-Sentinel is built as a collection of standalone, production-grade engineering modules. Each capability is independently auditable, operationally defensible, and designed for portability across enterprise risk platforms.
+Sentinel is organized as a collection of independently testable portfolio modules. The
+interfaces illustrate how comparable components could be integrated into a production risk
+platform after validation on representative operational data.
 
 **Behavioral Segmentation Engine — 25 DuckDB Signals**
 A library of 25 version-controlled SQL queries covering the full LMD contractor fraud surface: GPS impossible-transit detection, geofence miss analysis, emulator and rooted-device fingerprinting, shared-device and shared-payout clustering, refund velocity controls, incentive gaming identification, off-hours behavioral profiling, bot-assisted batch-grabbing detection, device forensics, device hopping, shared-IP clustering, payout-change velocity, and composite risk scoring. Every signal carries documented fraud type, FP risk classification, mitigation strategy, and threshold rationale — enabling defensible, auditable rule governance at scale.
@@ -93,7 +101,9 @@ A library of 25 version-controlled SQL queries covering the full LMD contractor 
 A novelty-detection layer targeting previously unseen behavioral patterns not yet codified in rule logic. Produces a normalised anomaly score that feeds directly into the ensemble blend, providing continuous coverage against emerging fraud typologies without requiring labelled training data for each new pattern.
 
 **Supervised Fraud Propensity Model — XGBoost with SHAP Explainability**
-A calibrated XGBoost classifier producing per-row fraud probability scores, with per-prediction SHAP feature-contribution explanations embedded in every generated case file. SHAP outputs provide the investigator-facing evidence layer required for legal defensibility and adverse-action appeals, translating model outputs into human-readable justification.
+An XGBoost classifier producing per-row fraud probability scores, with SHAP feature
+contributions embedded in generated case files. In the demo, these explanations help a
+reviewer understand model behavior; they do not independently justify an adverse action.
 
 **Entity Graph — Coordinated Multi-Account Ring Detection**
 A graph-based collusion-detection layer that identifies coordinated infrastructure across contractor accounts through shared device, shared bank account, shared store concentration, and shared incentive campaign edges. Ring membership triggers a proportional composite-score multiplier (1.2× for a 2-contractor pair, up to 1.5× for a 5+ contractor ring, capped at 10). IP-cluster edges are excluded from ring detection to prevent carrier NAT false positives.
@@ -102,10 +112,17 @@ A graph-based collusion-detection layer that identifies coordinated infrastructu
 A weighted ensemble combining all four detection layers: XGBoost 45%, Isolation Forest 25%, SQL signals 20%, entity graph 10%. The blend is designed to balance precision-recall trade-offs across fraud families, with ring multipliers applied post-blend to amplify coordinated-abuse signals without distorting single-account scores.
 
 **Audit-Ready Case Management — SHA-256 Integrity-Hashed Evidence Packs**
-Every CRITICAL and CRITICAL+ contractor record triggers automated generation of a structured Markdown case file containing: all four layer scores, SHAP top-5 feature contributions, cross-account collusion evidence, a five-step OSINT enrichment table with per-step audit hashes, a four-path false-positive exclusion checklist requiring analyst sign-off, a recommended action, and a SHA-256 integrity hash. Case files are designed to be handed directly to Legal or Compliance without further preparation.
+Every CRITICAL and CRITICAL+ contractor record triggers a structured Markdown case file
+containing layer scores, SHAP feature contributions, graph evidence, simulated enrichment,
+a false-positive checklist, a recommended next step, and an integrity hash. A production
+case would still require source verification, analyst review, access controls, and the
+organization's approved Legal or Compliance workflow.
 
 **Structured OSINT Enrichment Pipeline — Five-Step Identity Verification**
-A modular external-verification pipeline producing structured, audit-hashed evidence across five verification dimensions: identity document validation, device intelligence, address type classification, account-resale detection, and contractor-presence verification. Each enrichment step produces an independent audit record, enabling step-level evidentiary traceability and legal defensibility for adverse actions.
+A modular enrichment pipeline covering five verification dimensions: identity document
+validation, device intelligence, address type classification, account-resale detection, and
+contractor-presence verification. Portfolio mode uses deterministic simulation; approved
+vendors, privacy review, and source verification are required for operational use.
 
 **Immutable Data Lineage — Bronze-Layer Architecture with SHA-256 Chain**
 An end-to-end lineage architecture ensuring every scored record is traceable from raw ingestion event through enrichment, signal firing, model scoring, ensemble blend, and case generation. SHA-256 checksums at each stage create an immutable audit chain suitable for regulatory review, internal audit, and legal proceedings.
@@ -224,22 +241,26 @@ CRITICAL and CRITICAL+ contractors generate pre-populated Markdown case files co
 |---|---|---|---|
 | SQL Signals | 12/25 signals fired | > 5 | ✓ |
 | Isolation Forest | 0.681 anomaly score | > 0.60 | ✓ |
-| XGBoost | 1.000 fraud probability | > 0.50 | ✓ |
+| XGBoost | 1.000 demo probability | > 0.50 | ✓ |
 | Graph Ring | Member — 2-contractor ring (1.2× multiplier) | flag = 1 | ✓ |
-| **Composite** | **10 / 10 — CRITICAL+** | ≥ 7 | ✓ |
+| **Composite** | **10 / 10 — CRITICAL+ demo case** | ≥ 7 | ✓ |
+
+These values come from a deliberately separable synthetic scenario and demonstrate execution,
+not expected production discrimination.
 
 ### Sample Output — metrics.json (Demo Run)
 
 ```json
 {
-  "val_roc_auc": 0.847,
-  "val_avg_precision": 0.763,
-  "fraud_rate": 0.035,
-  "rows_scored": 12000,
-  "critical_cases_generated": 12,
-  "note": "demo dataset — see README for IEEE-CIS benchmark target"
+  "auc_roc": 1.0,
+  "auc_pr": 1.0,
+  "rows": 12000,
+  "fraud_rate": 0.03383333333333333
 }
 ```
+
+The perfect demo metrics result from deliberately separable synthetic features. They confirm
+that the pipeline runs; they are not a benchmark or forecast of production performance.
 
 ---
 

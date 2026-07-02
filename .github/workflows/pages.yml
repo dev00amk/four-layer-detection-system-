@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - codex/legibility-production-credibility
     paths:
       - "website/**"
       - "dashboards/case_001_graph.png"

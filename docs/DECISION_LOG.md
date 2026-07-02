@@ -192,11 +192,12 @@ the experience for the majority of legitimate contractors. Option C was rejected
 as disproportionate.
 
 **Expected impact:**
-- Estimated 25–35% reduction in GPS spoofing incidents (modeled assumption).
-- Estimated $1.3M quarterly fraud reduction if deployed at production scale.
+- Reduce confirmed GPS spoofing without applying device-attestation friction to the
+  full driver population.
+- Quantify impact only after a controlled rollout with adjudicated outcomes.
 
-**FP impact:** Estimated 2% increase in friction for legitimate drivers with
-prior geofence anomalies. Mitigated by fast-track attestation appeal process.
+**FP impact:** Monitor added friction for legitimate drivers with prior geofence anomalies.
+Mitigate through fast-track attestation review and an appeal process.
 
 **Owner:** Fraud Operations + Platform Integrity Engineering.
 

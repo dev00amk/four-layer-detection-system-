@@ -53,7 +53,7 @@ pending investigation
 
 1. SQL signals: 12 of 25 rules triggered across GPS, device, and payout domains
 2. Isolation Forest: 0.681 anomaly score — behaviour is novel vs legitimate cohort
-3. XGBoost: 1.000 fraud propensity — highest possible score
+3. XGBoost: 1.000 synthetic-demo propensity — intentionally separable test scenario
 4. Graph: both accounts share one device cluster and one bank token
 
 **False-positive paths evaluated:**

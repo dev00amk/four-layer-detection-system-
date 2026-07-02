@@ -144,7 +144,7 @@ platform facts or production benchmark claims.
 |---|---|---|---|
 | SQL signals | 12/25 signals fired | > 5 | ✓ |
 | Isolation Forest | 0.681 anomaly score | > 0.60 | ✓ |
-| XGBoost | 1.000 fraud probability | > 0.50 | ✓ |
+| XGBoost | 1.000 synthetic-demo probability | > 0.50 | ✓ |
 | Graph ring | Member — 2-driver ring (1.2× multiplier) | flag = 1 | ✓ |
 | **Composite** | **10 / 10 — CRITICAL+** | ≥ 7 | ✓ |
 

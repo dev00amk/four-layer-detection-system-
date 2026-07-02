@@ -330,11 +330,10 @@ export function App() {
           <div className="section-heading-row skills-heading">
             <div>
               <p className="section-label">## role_capability_map</p>
-              <h2>Required skills.<br />Repository evidence.</h2>
+              <h2>Fraud operations.<br />Evidence in the project.</h2>
             </div>
             <p className="comment">
-              // Each claim links to a working artifact. Degree and years-of-experience
-              requirements are intentionally not inferred from project code.
+              // Each capability links to code, analysis, or a documented operating control.
             </p>
           </div>
 

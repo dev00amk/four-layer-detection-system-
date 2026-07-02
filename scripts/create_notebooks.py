@@ -8,14 +8,14 @@ NOTEBOOKS = ROOT / "notebooks"
 NOTEBOOKS.mkdir(exist_ok=True)
 
 
-def write(name, title, purpose, cells):
+def write(name, title, purpose, takeaway, cells):
     nb = nbf.v4.new_notebook()
     nb["metadata"]["kernelspec"] = {"display_name": "Python 3", "language": "python", "name": "python3"}
     nb["cells"] = [
         nbf.v4.new_markdown_cell(f"# {title}\n\n## tl;dr\n\nRun the pipeline first; this notebook derives its findings from the generated silver and gold artifacts."),
         nbf.v4.new_markdown_cell(f"## Context & Methods\n\n{purpose}\n\n### Key Assumptions\n\nSynthetic telemetry is deterministic and illustrative; IEEE-CIS labels remain the supervised target."),
         *cells,
-        nbf.v4.new_markdown_cell("## Takeaways\n\nUse the executed charts and tables to explain how complementary detection layers reduce blind spots while preserving analyst review."),
+        nbf.v4.new_markdown_cell(f"## Takeaways\n\n{takeaway}"),
     ]
     nbf.write(nb, NOTEBOOKS / name)
 
@@ -31,6 +31,9 @@ write(
     "01_eda.ipynb",
     "Project Sentinel — Exploratory Data Analysis",
     "Validate class imbalance and the separability of enriched last-mile delivery risk signals.",
+    "The synthetic sample is intentionally separable, so distribution plots are useful for "
+    "pipeline QA but cannot establish production thresholds. Re-estimate every boundary on "
+    "representative operational cohorts.",
     [
         nbf.v4.new_markdown_cell("## Data"),
         setup,
@@ -53,6 +56,8 @@ write(
     "04_ml_model.ipynb",
     "Project Sentinel — Four-Layer Model",
     "Review validated model metrics, feature importance, and the benchmark comparison.",
+    "Perfect demo discrimination reflects the data generator, not expected field performance. "
+    "Use time-based validation, calibration, and adjudicated outcomes before comparing models.",
     [
         nbf.v4.new_markdown_cell("## Data"),
         setup,
@@ -77,6 +82,8 @@ write(
     "05_graph_analysis.ipynb",
     "Project Sentinel — Fraud Ring Analysis",
     "Show how shared device, payout, and network entities expose coordination that row-level classifiers miss.",
+    "The graph adds value when independent identifiers converge. Shared IP or household "
+    "infrastructure alone is insufficient evidence and should remain corroborative.",
     [
         nbf.v4.new_markdown_cell("## Data"),
         nbf.v4.new_code_cell(

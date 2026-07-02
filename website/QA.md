@@ -1,6 +1,6 @@
-# Project Sentinel website — design QA
+# Project Sentinel website QA
 
-## Reference comparison
+## Visual review
 
 - Source captured at `https://ponytail.dev/` in desktop and mobile states.
 - Preserved the reference's terminal framing, monospace hierarchy, hard-edged controls, restrained accent palette, and compressed mobile layout.
@@ -29,6 +29,5 @@
 - Demo scale is explicitly labeled synthetic.
 - No production efficacy, savings, or ROI claims are presented.
 - Footer states that this is not a Walmart system.
-- Degree and years-of-experience qualifications are not inferred from project artifacts.
 
-final result: passed
+Status: passed
