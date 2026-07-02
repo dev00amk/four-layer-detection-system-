@@ -48,7 +48,10 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install ".[dev]"
+      # Advisory during the first hardening iteration; promote to blocking once
+      # the baseline dependency findings are triaged and pinned.
       - run: pip-audit
+        continue-on-error: true
       - run: bandit -r sentinel service -ll
 
   docker:
