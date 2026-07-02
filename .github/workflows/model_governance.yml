@@ -46,7 +46,7 @@ jobs:
           python -m sentinel.enrich
 
       - name: Run full scoring pipeline
-        run: python run.py
+        run: python run.py full --rows 4000
 
       - name: Evaluate model metrics
         id: metrics
@@ -61,14 +61,13 @@ jobs:
               sys.exit(1)
 
           m = json.loads(metrics_file.read_text())
-          roc = m.get('val_roc_auc', 0)
-          pr  = m.get('val_avg_precision', 0)
+          roc = m.get('auc_roc', 0)
+          pr  = m.get('auc_pr', 0)
 
           print(f'AUC-ROC:  {roc:.4f}  (threshold: 0.80)')
           print(f'AUC-PR:   {pr:.4f}  (threshold: 0.70)')
           print(f'Fraud rate: {m.get("fraud_rate", 0):.4f}')
-          print(f'Rows scored: {m.get("rows_scored", 0)}')
-          print(f'Critical cases: {m.get("critical_cases_generated", 0)}')
+          print(f'Rows scored: {m.get("rows", 0)}')
 
           failures = []
           if roc < 0.80:
@@ -101,28 +100,9 @@ jobs:
               print('No metrics file for drift check — skipping')
               exit(0)
 
-          # Reload scored output for drift check
-          # In CI we use the demo dataset scores as a proxy
-          import sys
-          try:
-              import duckdb
-              bronze = list(Path('data/bronze').glob('*.parquet'))
-              if bronze:
-                  con = duckdb.connect()
-                  # Try to get composite scores if they exist
-                  try:
-                      scores_raw = con.execute(
-                          f"SELECT composite_score FROM read_parquet('{bronze[0]}')
-                          f" WHERE composite_score IS NOT NULL LIMIT 5000"
-                      ).fetchall()
-                      scores = [r[0] for r in scores_raw]
-                  except Exception:
-                      scores = []
-              else:
-                  scores = []
-          except Exception as e:
-              print(f'Drift check skipped: {e}')
-              exit(0)
+          import pandas as pd
+          scored = Path('data/gold/scored_trips.parquet')
+          scores = pd.read_parquet(scored)['score'].head(5000).tolist() if scored.exists() else []
 
           if len(scores) < 10:
               print('Insufficient scored records for drift check in demo run — skipping')
@@ -184,11 +164,10 @@ jobs:
               summary = f'''## Model Governance Run Summary
           | Metric | Value |
           |--------|-------|
-          | AUC-ROC | {m.get("val_roc_auc", "N/A")} |
-          | AUC-PR | {m.get("val_avg_precision", "N/A")} |
+          | AUC-ROC | {m.get("auc_roc", "N/A")} |
+          | AUC-PR | {m.get("auc_pr", "N/A")} |
           | Fraud rate | {m.get("fraud_rate", "N/A")} |
-          | Rows scored | {m.get("rows_scored", "N/A")} |
-          | Critical cases | {m.get("critical_cases_generated", "N/A")} |
+          | Rows scored | {m.get("rows", "N/A")} |
           '''
               import os
               step_summary = os.environ.get('GITHUB_STEP_SUMMARY', '')
