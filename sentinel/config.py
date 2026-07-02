@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     address_api_key: str = ""
 
     @model_validator(mode="after")
-    def validate_runtime(self) -> "Settings":
+    def validate_runtime(self) -> Settings:
         total = self.xgb_weight + self.iforest_weight + self.sql_weight + self.graph_weight
         if abs(total - 1.0) > 1e-6:
             raise ValueError(f"Ensemble weights must sum to 1.0; received {total:.3f}")

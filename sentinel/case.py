@@ -4,10 +4,12 @@ from __future__ import annotations
 import hashlib
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pandas as pd
 
 from .config import CASES, ensure_directories, settings
+from .exceptions import DataValidationError
 from .logger import set_correlation_id
 from .osint import enrich_driver
 
@@ -23,9 +25,18 @@ def generate_cases_from_scores(
     shap_df: pd.DataFrame,
     cross_role_df: pd.DataFrame,
     limit: int | None = None,
+    output_dir: Path | None = None,
 ) -> int:
     """Generate the bounded critical-case queue and return its case count."""
     ensure_directories()
+    required = {"driver_id", "band", "score"}
+    missing = sorted(required - set(scored.columns))
+    if missing:
+        raise DataValidationError("Scored data missing columns: " + ", ".join(missing))
+    if not shap_df.empty and not set(shap_df["row_index"]).issubset(set(scored.index)):
+        raise DataValidationError("SHAP row_index values are not aligned to scored rows")
+    target = output_dir or CASES
+    target.mkdir(parents=True, exist_ok=True)
     critical = (
         scored[scored["band"].str.startswith("CRITICAL")]
         .drop_duplicates("driver_id")
@@ -119,6 +130,6 @@ store, and campaign links. Escalate sensitive adverse-action decisions to Legal/
 **Notes:**  
 """
         body += f"\n**Evidence integrity SHA-256:** `{_evidence_hash(body)}`\n"
-        (CASES / f"CASE_{row.driver_id}.md").write_text(body, encoding="utf-8")
+        (target / f"CASE_{row.driver_id}.md").write_text(body, encoding="utf-8")
         log.info("case_generated", extra={"driver_id": row.driver_id, "band": row.band})
     return len(critical)

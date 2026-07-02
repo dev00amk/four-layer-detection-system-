@@ -35,8 +35,11 @@ Hard-blocks production deployment if any group fails the four-fifths rule
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 FAIRNESS_DIR = Path("data/fairness")
 ALERTS_FILE = FAIRNESS_DIR / "alerts.jsonl"
@@ -229,9 +232,9 @@ def check_fairness(
 # DataFrame convenience wrapper
 # ---------------------------------------------------------------------------
 
-def run_fairness_check(scored_df, score_col: str = "composite_score") -> dict:
+def run_fairness_check(scored_df, score_col: str = "score") -> dict:
     """
-    Accept a pandas DataFrame with composite_score, device_tier, geography columns.
+    Accept a pandas DataFrame with score, device_tier, and geography columns.
     Adds is_critical flag and runs the fairness check.
     Raises RuntimeError if BLOCK_ON_FAILURE and failures found.
     """
@@ -242,7 +245,10 @@ def run_fairness_check(scored_df, score_col: str = "composite_score") -> dict:
     report = check_fairness(records)
 
     status = "FAIL" if report["any_failures"] else "PASS"
-    print(f"[fairness] overall_rate={report['overall_rate']:.1%} status={status}")
+    log.info(
+        "fairness_checked",
+        extra={"overall_rate": report["overall_rate"], "status": status},
+    )
 
     if report["block_pipeline"]:
         raise RuntimeError(
@@ -270,11 +276,11 @@ if __name__ == "__main__":
             "is_critical": random.random() < base_rate,
         })
     report = check_fairness(records)
-    print(json.dumps({
+    log.info("fairness_smoke_result", extra={"report": {
         "any_failures": report["any_failures"],
         "recommended_action": report["recommended_action"],
         "dimensions_summary": {
             col: {g: v["four_fifths"] for g, v in dim.items()}
             for col, dim in report["dimensions"].items()
         },
-    }, indent=2))
+    }})

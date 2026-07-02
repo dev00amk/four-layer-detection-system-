@@ -183,10 +183,25 @@ The CLI also exposes independently restartable phases:
 python run.py demo [--rows N] [--seed N]  Generate deterministic source CSVs
 python run.py ingest                       Validate and write immutable bronze
 python run.py enrich                       Validate and write delivery telemetry
-python run.py score                        Build graph, train models, and score
+python run.py train                        Train and persist a versioned model bundle
+python run.py score [--retrain]            Score with the persisted model (or retrain)
 python run.py cases                        Generate the bounded case queue
 python run.py report                       Write investigator feedback metrics
 python run.py full                         Execute the complete local workflow
+```
+
+### Online scoring API
+
+The FastAPI service loads one persisted model at startup and exposes health,
+readiness, model metadata, single-record scoring, and batches capped at 1,000 records.
+SQL and graph inputs are optional precomputed values because those layers require
+corpus context; the batch CLI remains the authoritative full four-layer path.
+
+```bash
+pip install -e ".[api]"
+python run.py train
+uvicorn service.app:app --host 0.0.0.0 --port 8000
+# or: docker compose up --build
 ```
 
 For the full 590,540-row dataset, accept the IEEE-CIS competition rules, place `train_transaction.csv` and `train_identity.csv` in `data/raw/`, and start at ingestion.
@@ -312,8 +327,8 @@ Ruff, mypy, coverage-enforced tests, and the end-to-end demo on Python 3.10
 and 3.11.
 
 ```bash
-ruff check sentinel tests run.py
-mypy sentinel run.py
+ruff check sentinel service tests run.py
+mypy sentinel service run.py
 pytest
 ```
 

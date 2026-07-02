@@ -213,7 +213,12 @@ def _seeded_bool(driver_id: str, step: str, fraud_rate: float = 0.25) -> bool:
     Deterministic simulation: same driver always gets same OSINT result.
     Fraud-labeled drivers have higher OSINT risk signal rates.
     """
-    seed_val = int(hashlib.md5(f"{driver_id}:{step}".encode()).hexdigest(), 16)
+    seed_val = int(
+        hashlib.md5(
+            f"{driver_id}:{step}".encode(), usedforsecurity=False
+        ).hexdigest(),
+        16,
+    )
     rng = random.Random(seed_val)
     return rng.random() < fraud_rate
 
@@ -522,10 +527,11 @@ def enrich_driver(
                 "osint_step_completed",
                 extra={"driver_id": driver_id, "step_id": step_id, "result_code": result.result_code},
             )
-        except Exception as exc:
+        except (OsintVendorError, OSError, ValueError, TypeError) as exc:
             log.error(
                 "osint_step_failed",
                 extra={"driver_id": driver_id, "step_id": step_id, "error_type": type(exc).__name__},
+                exc_info=True,
             )
             results.append(OsintResult(
                 step_id=step_id,

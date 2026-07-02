@@ -2,22 +2,30 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from .config import BRONZE, SILVER, ensure_directories
+from .exceptions import DataValidationError
 from .schema import EnrichedTrip, validate_dataframe
 
 log = logging.getLogger(__name__)
 
 
-def enrich(seed: int = 42) -> pd.DataFrame:
+def enrich(
+    seed: int = 42,
+    source_path: Path | None = None,
+    output_dir: Path | None = None,
+) -> pd.DataFrame:
+    """Create deterministic delivery telemetry while preserving source rows."""
     ensure_directories()
-    source = BRONZE / "train_transaction.parquet"
+    source = source_path or BRONZE / "train_transaction.parquet"
     if not source.exists():
         raise FileNotFoundError("Run `python -m sentinel.ingest` first.")
     df = pd.read_parquet(source)
+    source_rows = len(df)
     rng = np.random.default_rng(seed)
     n = len(df)
     fraud = df["isFraud"].astype(bool).to_numpy()
@@ -98,7 +106,13 @@ def enrich(seed: int = 42) -> pd.DataFrame:
         .astype(int)
     )
     validate_dataframe(df, EnrichedTrip)
-    output = SILVER / "spark_driver_trips.parquet"
+    if len(df) != source_rows:
+        raise DataValidationError(
+            f"Enrichment changed row count from {source_rows} to {len(df)}"
+        )
+    target_dir = output_dir or SILVER
+    target_dir.mkdir(parents=True, exist_ok=True)
+    output = target_dir / "spark_driver_trips.parquet"
     df.to_parquet(output, index=False)
     log.info(
         "silver_written",

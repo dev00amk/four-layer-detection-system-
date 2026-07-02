@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -16,8 +18,10 @@ from .anomaly import (
     evaluate_fatal_signals,
     risk_band_router,
 )
-from .config import MODELS, ensure_directories
+from .config import MODELS
 from .features import BEHAVIORAL_FEATURES, ROLLING_FEATURES, build_behavioral_features
+
+log = logging.getLogger(__name__)
 
 # XGBoost feature matrix: three groups with an explicit production migration path.
 #
@@ -74,11 +78,25 @@ class SentinelModel:
         self.iforest = IsolationForestDetector(random_state=random_state)
         self.metrics: dict[str, float | int] = {}
 
-    def _matrix(self, df):
+    def _matrix(self, df: pd.DataFrame) -> pd.DataFrame:
         featured = build_behavioral_features(df)
-        return featured[self.XGB_FEATURES].replace([np.inf, -np.inf], np.nan).fillna(-999).astype(float)
+        matrix = featured[self.XGB_FEATURES].replace([np.inf, -np.inf], np.nan)
+        ratios = matrix.isna().mean()
+        high_missing = {
+            feature: round(float(ratio), 4)
+            for feature, ratio in ratios.items()
+            if ratio > 0.05
+        }
+        if high_missing:
+            log.warning("feature_imputation_high", extra={"fill_ratios": high_missing})
+        return matrix.fillna(-999).astype(float)
 
-    def fit(self, df, y):
+    def fit(
+        self,
+        df: pd.DataFrame,
+        y: pd.Series,
+        metrics_dir: Path | None = None,
+    ) -> SentinelModel:
         X = self._matrix(df)
         train_idx, test_idx = train_test_split(
             np.arange(len(X)), test_size=0.25, stratify=y, random_state=self.random_state
@@ -91,14 +109,23 @@ class SentinelModel:
         self.metrics = {
             "auc_roc": float(roc_auc_score(y.iloc[test_idx], prob)),
             "auc_pr": float(average_precision_score(y.iloc[test_idx], prob)),
-            "rows": int(len(df)),
+            "rows": len(df),
             "fraud_rate": float(y.mean()),
         }
-        ensure_directories()
-        (MODELS / "metrics.json").write_text(json.dumps(self.metrics, indent=2), encoding="utf-8")
+        target = metrics_dir or MODELS
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "metrics.json").write_text(
+            json.dumps(self.metrics, indent=2), encoding="utf-8"
+        )
         return self
 
-    def predict(self, df, graph_flags, ring_sizes, sql_hits):
+    def predict(
+        self,
+        df: pd.DataFrame,
+        graph_flags: pd.Series | np.ndarray,
+        ring_sizes: pd.Series | np.ndarray,
+        sql_hits: pd.Series | np.ndarray,
+    ) -> pd.DataFrame:
         X = self._matrix(df)
         xgb_prob = self.xgb.predict_proba(X)[:, 1]
         if_score = self.iforest.predict_score(X)
@@ -137,7 +164,7 @@ class SentinelModel:
             }
         )
 
-    def explain(self, df, top_n: int = 5):
+    def explain(self, df: pd.DataFrame, top_n: int = 5) -> pd.DataFrame:
         X = self._matrix(df)
         contributions = self.xgb.get_booster().predict(xgb.DMatrix(X), pred_contribs=True)[:, :-1]
         rows = []
@@ -158,11 +185,8 @@ class SentinelModel:
 
 def main():
     from .config import SILVER
-    from .db import get_connection, get_scored_inputs
 
     df = pd.read_parquet(SILVER / "spark_driver_trips.parquet")
-    con = get_connection()
-    graph_flags, ring_sizes, sql_hits = get_scored_inputs(con, df)
     model = SentinelModel().fit(df, df["isFraud"].astype(int))
     print(json.dumps(model.metrics, indent=2))
 
