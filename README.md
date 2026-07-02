@@ -1,4 +1,8 @@
-# Project Sentinel — Enterprise Last-Mile Fraud Detection Framework
+# Project Sentinel — Four-layer Spark Driver Fraud Detection System
+
+[Explore the interactive portfolio](https://dev00amk.github.io/four-layer-detection-system-/) · [Run the demo](docs/DEMO_WALKTHROUGH.md) · [Inspect CASE_001](cases/CASE_001.md)
+
+Portfolio implementation of Spark Driver fraud detection operations: multi-layer behavioral detection, structured OSINT enrichment, and investigator-ready case management designed for auditability, false-positive control, and legal defensibility.
 
 ## Executive summary
 
