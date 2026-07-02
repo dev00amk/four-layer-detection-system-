@@ -154,7 +154,7 @@ score alone.
 
 ## SHAP top five
 
-| Feature | Observed demonstration value | SHAP contribution |
+| Feature | Synthetic demonstration value | SHAP contribution |
 |---|---:|---:|
 | incentive_trip_count | 21.000 | 7.2126 |
 | geofence_dist_m | 632.092 | 1.0762 |
