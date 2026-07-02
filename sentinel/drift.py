@@ -27,9 +27,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
-from .config import settings
+from .config import DATA, settings
 
-DRIFT_DIR = Path("data/drift")
+DRIFT_DIR = DATA / "drift"
 BASELINE_FILE = DRIFT_DIR / "baseline.json"
 ALERTS_FILE = DRIFT_DIR / "alerts.jsonl"
 
@@ -101,22 +101,25 @@ def _summary(scores: Sequence[float]) -> dict:
 # Baseline management
 # ---------------------------------------------------------------------------
 
-def save_baseline(scores: Sequence[float], run_ts: str | None = None) -> dict:
+def save_baseline(
+    scores: Sequence[float], run_ts: str | None = None, drift_dir: Path = DRIFT_DIR
+) -> dict:
     """Persist the current score distribution as the baseline."""
-    DRIFT_DIR.mkdir(parents=True, exist_ok=True)
+    drift_dir.mkdir(parents=True, exist_ok=True)
     baseline = {
         "run_ts": run_ts or datetime.now(timezone.utc).isoformat(),
         **_summary(scores),
     }
-    BASELINE_FILE.write_text(json.dumps(baseline, indent=2))
+    (drift_dir / "baseline.json").write_text(json.dumps(baseline, indent=2))
     return baseline
 
 
-def load_baseline() -> dict | None:
+def load_baseline(drift_dir: Path = DRIFT_DIR) -> dict | None:
     """Load the stored baseline, or None if not yet saved."""
-    if not BASELINE_FILE.exists():
+    baseline_file = drift_dir / "baseline.json"
+    if not baseline_file.exists():
         return None
-    return json.loads(BASELINE_FILE.read_text())
+    return json.loads(baseline_file.read_text())
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +129,7 @@ def load_baseline() -> dict | None:
 def check_drift(
     scores: Sequence[float],
     run_ts: str | None = None,
+    drift_dir: Path = DRIFT_DIR,
 ) -> dict:
     """
     Compare current score distribution against baseline.
@@ -141,11 +145,11 @@ def check_drift(
     """
     run_ts = run_ts or datetime.now(timezone.utc).isoformat()
     current = _summary(scores)
-    baseline = load_baseline()
+    baseline = load_baseline(drift_dir)
 
     if baseline is None:
         # First run — establish baseline and return a no-drift result
-        save_baseline(scores, run_ts)
+        save_baseline(scores, run_ts, drift_dir)
         return {
             "psi": 0.0,
             "psi_status": "stable",
@@ -185,7 +189,7 @@ def check_drift(
 
     alert_written = False
     if status in ("monitor", "alert"):
-        DRIFT_DIR.mkdir(parents=True, exist_ok=True)
+        drift_dir.mkdir(parents=True, exist_ok=True)
         alert = {
             "run_ts": run_ts,
             "psi": round(psi, 4),
@@ -196,7 +200,7 @@ def check_drift(
             "baseline_n": baseline.get("n"),
             "recommended_action": actions[status],
         }
-        with ALERTS_FILE.open("a", encoding="utf-8") as fh:
+        with (drift_dir / "alerts.jsonl").open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(alert) + "\n")
         alert_written = True
 

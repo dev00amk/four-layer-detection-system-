@@ -38,7 +38,9 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-FAIRNESS_DIR = Path("data/fairness")
+from .config import DATA
+
+FAIRNESS_DIR = DATA / "fairness"
 ALERTS_FILE = FAIRNESS_DIR / "alerts.jsonl"
 
 MIN_GROUP_SIZE = 30          # minimum contractors for a reliable rate
@@ -83,8 +85,12 @@ def _adverse_rates(
 
 def _four_fifths_test(rates: dict[str, dict]) -> dict[str, dict]:
     """
-    Apply the EEOC four-fifths rule.
-    Returns per-group pass/fail/skip verdict.
+    Apply the EEOC four-fifths rule for adverse actions.
+
+    The impact ratio is best_rate / group_rate: the most-favoured group's
+    adverse rate over each group's own rate. A group receiving adverse
+    action more often than 1.25x the best group falls below 0.80 and fails.
+    (rate / best_rate would always be >= 1.0, making failure unreachable.)
     """
     computed = {g: v for g, v in rates.items() if v["rate"] is not None}
     if not computed:
@@ -96,8 +102,8 @@ def _four_fifths_test(rates: dict[str, dict]) -> dict[str, dict]:
         if v["rate"] is None:
             results[g] = {**v, "four_fifths": "skip", "ratio": None}
             continue
-        ratio = v["rate"] / best_rate if best_rate > 0 else None
-        passed = (ratio is None) or (ratio >= FOUR_FIFTHS_THRESHOLD)
+        ratio = best_rate / v["rate"] if v["rate"] > 0 else 1.0
+        passed = ratio >= FOUR_FIFTHS_THRESHOLD
         results[g] = {**v, "four_fifths": "pass" if passed else "FAIL", "ratio": ratio}
 
     return results
@@ -143,6 +149,7 @@ def check_fairness(
     adverse_col: str = "is_critical",
     reference_groups: dict[str, str] | None = None,
     run_ts: str | None = None,
+    alerts_dir: Path = FAIRNESS_DIR,
 ) -> dict:
     """
     Run disparate impact analysis across all specified group columns.
@@ -218,8 +225,8 @@ def check_fairness(
     }
 
     if any_failures:
-        FAIRNESS_DIR.mkdir(parents=True, exist_ok=True)
-        with ALERTS_FILE.open("a", encoding="utf-8") as fh:
+        alerts_dir.mkdir(parents=True, exist_ok=True)
+        with (alerts_dir / "alerts.jsonl").open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(report) + "\n")
 
     return report
