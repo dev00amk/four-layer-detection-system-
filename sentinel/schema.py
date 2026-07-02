@@ -6,11 +6,12 @@ from typing import Any, TypeVar
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from .exceptions import DataValidationError
+
 T = TypeVar("T", bound=BaseModel)
 
 
-class SchemaValidationError(ValueError):
-    """Raised when a dataset violates a Sentinel boundary contract."""
+SchemaValidationError = DataValidationError
 
 
 class BronzeTransaction(BaseModel):
@@ -45,13 +46,17 @@ class EnrichedTrip(BaseModel):
     trip_duration_min: float = Field(gt=0)
 
 
-def validate_dataframe(df: pd.DataFrame, model: type[T], sample_size: int = 1_000) -> None:
-    """Validate columns and a deterministic bounded sample of dataframe rows."""
+def validate_dataframe(
+    df: pd.DataFrame,
+    model: type[T],
+    sample_size: int | None = None,
+) -> None:
+    """Validate required columns, rows, and cross-column invariants."""
     required = set(model.model_fields)
     missing = sorted(required - set(df.columns))
     if missing:
         raise SchemaValidationError(f"{model.__name__}: missing columns: {', '.join(missing)}")
-    sample = df.head(sample_size)
+    sample = df if sample_size is None else df.head(sample_size)
     errors: list[str] = []
     for index, record in sample.iterrows():
         try:
@@ -62,3 +67,12 @@ def validate_dataframe(df: pd.DataFrame, model: type[T], sample_size: int = 1_00
                 break
     if errors:
         raise SchemaValidationError(f"{model.__name__} validation failed: {'; '.join(errors)}")
+    if "driver_id" in df and df["driver_id"].isna().any():
+        raise DataValidationError(f"{model.__name__}: driver_id contains null values")
+    if {"trip_start_ts", "trip_end_ts"}.issubset(df.columns):
+        start = pd.to_datetime(df["trip_start_ts"], errors="coerce")
+        end = pd.to_datetime(df["trip_end_ts"], errors="coerce")
+        if start.isna().any() or end.isna().any() or (end < start).any():
+            raise DataValidationError(
+                f"{model.__name__}: trip timestamps are missing or out of order"
+            )

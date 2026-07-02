@@ -22,10 +22,16 @@ data/drift/baseline.json on first run.
 from __future__ import annotations
 
 import json
+import logging
 import math
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Sequence
+from typing import Any, cast
+
+from .config import settings
+
+log = logging.getLogger(__name__)
 
 DRIFT_DIR = Path("data/drift")
 BASELINE_FILE = DRIFT_DIR / "baseline.json"
@@ -33,7 +39,7 @@ ALERTS_FILE = DRIFT_DIR / "alerts.jsonl"
 
 # PSI thresholds
 PSI_MONITOR = 0.10
-PSI_ALERT = 0.25
+PSI_ALERT = settings.psi_threshold
 
 # Risk band boundaries (composite score 0-10)
 BAND_BOUNDARIES = [0.0, 3.0, 5.0, 7.0, 10.01]
@@ -68,7 +74,7 @@ def _psi(expected: list[float], actual: list[float]) -> float:
 
 def _band_rates(scores: Sequence[float]) -> dict[str, float]:
     """Return fraction of scores in each risk band."""
-    counts = {b: 0 for b in BAND_NAMES}
+    counts = dict.fromkeys(BAND_NAMES, 0)
     for s in scores:
         for i, (lo, hi) in enumerate(zip(BAND_BOUNDARIES, BAND_BOUNDARIES[1:])):
             if lo <= s < hi:
@@ -113,7 +119,7 @@ def load_baseline() -> dict | None:
     """Load the stored baseline, or None if not yet saved."""
     if not BASELINE_FILE.exists():
         return None
-    return json.loads(BASELINE_FILE.read_text())
+    return cast(dict[str, Any], json.loads(BASELINE_FILE.read_text()))
 
 
 # ---------------------------------------------------------------------------
@@ -212,16 +218,19 @@ def check_drift(
 # Convenience wrapper for run.py integration
 # ---------------------------------------------------------------------------
 
-def run_drift_check(scored_df, score_col: str = "composite_score") -> dict:
+def run_drift_check(scored_df, score_col: str = "score") -> dict:
     """
     Accept a pandas/polars DataFrame and run drift check.
     Returns drift result dict. Call after ensemble scoring in run.py.
     """
     scores = scored_df[score_col].dropna().tolist()
     result = check_drift(scores)
-    print(f"[drift] PSI={result['psi']:.3f} status={result['psi_status']}")
+    log.info(
+        "drift_checked",
+        extra={"psi": result["psi"], "status": result["psi_status"]},
+    )
     if result["alert_written"]:
-        print(f"[drift] Alert written to {ALERTS_FILE}")
+        log.warning("drift_alert_written", extra={"path": str(ALERTS_FILE)})
     return result
 
 
@@ -230,11 +239,11 @@ if __name__ == "__main__":
     # Smoke-test: generate baseline then simulate a shifted distribution
     baseline_scores = [random.gauss(3.0, 1.5) for _ in range(1000)]
     baseline_scores = [max(0.0, min(10.0, s)) for s in baseline_scores]
-    print("Saving baseline...")
+    log.info("drift_baseline_saving")
     save_baseline(baseline_scores)
 
     shifted_scores = [random.gauss(5.5, 2.0) for _ in range(1000)]
     shifted_scores = [max(0.0, min(10.0, s)) for s in shifted_scores]
-    print("Checking drift on shifted distribution...")
+    log.info("drift_shift_check_started")
     result = check_drift(shifted_scores)
-    print(json.dumps(result, indent=2))
+    log.info("drift_smoke_result", extra={"result": result})

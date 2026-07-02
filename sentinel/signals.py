@@ -1,9 +1,16 @@
 """Execute the versioned SQL signal library and aggregate driver hits."""
 from __future__ import annotations
 
+import logging
+from pathlib import Path
+
+import duckdb
 import pandas as pd
 
 from .config import SQL_SIGNALS
+from .exceptions import SignalExecutionError
+
+log = logging.getLogger(__name__)
 
 MONITORING_SIGNALS = frozenset(
     {
@@ -17,16 +24,30 @@ MONITORING_SIGNALS = frozenset(
 MAX_FRAUD_SIGNALS = 22
 
 
-def run_signals(con) -> pd.DataFrame:
-    frames = []
-    for path in sorted(SQL_SIGNALS.glob("*.sql")):
-        result = con.execute(path.read_text(encoding="utf-8")).df()
+def run_signals(
+    con: duckdb.DuckDBPyConnection,
+    signal_dir: Path | None = None,
+) -> pd.DataFrame:
+    """Run independent SQL signals, isolating failures to one signal file."""
+    frames: list[pd.DataFrame] = []
+    paths = sorted((signal_dir or SQL_SIGNALS).glob("*.sql"))
+    failed = 0
+    for path in paths:
+        try:
+            result = con.execute(path.read_text(encoding="utf-8")).df()
+        except duckdb.Error:
+            failed += 1
+            log.warning("signal_failed", extra={"signal_code": path.stem}, exc_info=True)
+            continue
         if "driver_id" not in result:
             continue
         result = result[["driver_id"]].drop_duplicates()
         result["signal_code"] = path.stem
         result["monitoring_only"] = path.stem in MONITORING_SIGNALS
         frames.append(result)
+    if paths and failed == len(paths):
+        raise SignalExecutionError(f"All {failed} SQL signals failed")
+    log.info("signals_completed", extra={"executed": len(paths) - failed, "failed": failed})
     if not frames:
         return pd.DataFrame(columns=["driver_id", "hit_count", "triggered_signals"])
     hits = pd.concat(frames, ignore_index=True)

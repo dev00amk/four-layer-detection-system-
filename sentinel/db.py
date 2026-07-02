@@ -1,10 +1,15 @@
 """DuckDB connection and typed feature bridges."""
 from __future__ import annotations
 
+import logging
+from pathlib import Path
+
 import duckdb
 import pandas as pd
 
 from .config import GOLD, ROOT, SILVER, ensure_directories
+
+log = logging.getLogger(__name__)
 
 
 def get_connection(read_only: bool = False) -> duckdb.DuckDBPyConnection:
@@ -34,10 +39,15 @@ def get_cross_role_df(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     try:
         return con.execute("SELECT * FROM cross_role_risk").df()
     except duckdb.Error:
+        log.warning("cross_role_view_unavailable", exc_info=True)
         return pd.DataFrame(columns=["driver_id", "collusion_signal_count", "collusion_flag"])
 
 
-def get_scored_inputs(con, feature_df: pd.DataFrame, graph_csv=None):
+def get_scored_inputs(
+    con: duckdb.DuckDBPyConnection,
+    feature_df: pd.DataFrame,
+    graph_csv: Path | None = None,
+) -> tuple[pd.Series, pd.Series, pd.Series]:
     from .graph import get_ring_flags
     from .signals import run_signals
 
