@@ -18,8 +18,7 @@ def get_connection(read_only: bool = False) -> duckdb.DuckDBPyConnection:
     if not silver.exists():
         raise FileNotFoundError("Silver data missing. Run demo, ingest, and enrich first.")
     con = duckdb.connect(str(GOLD / "sentinel.duckdb"), read_only=read_only)
-    path = silver.as_posix().replace("'", "''")
-    con.execute(f"CREATE OR REPLACE VIEW spark_trips AS SELECT * FROM read_parquet('{path}')")
+    con.from_parquet(str(silver)).create_view("spark_trips", replace=True)
     con.execute(
         """
         CREATE OR REPLACE MACRO haversine_km(lat1, lon1, lat2, lon2) AS
