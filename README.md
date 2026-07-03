@@ -167,6 +167,39 @@ SQL Signals  ML Models (Isolation Forest + XGBoost + Graph)
 
 ---
 
+## Lightweight SQLite Prototype
+
+The [`prototypes/four-layer-detection-system`](prototypes/four-layer-detection-system/)
+directory contains a dependency-free Python 3.10+ reference backend for the core
+transaction-risk lifecycle:
+
+- **Layer 1:** transaction schema validation and UTC normalization
+- **Layer 2:** deterministic velocity and high-amount rules
+- **Layer 3:** transparent historical-baseline deviation signal
+- **Layer 4:** SQLite alert persistence, deduplication, assignment, and closure
+
+```mermaid
+flowchart LR
+    A[Inbound JSON] --> B[Layer 1: Validate]
+    B --> C[Layer 2: Heuristics]
+    C --> D[Layer 3: Baseline]
+    D --> E[Layer 4: Alerts DB]
+    E --> F[Case Workflow]
+```
+
+```bash
+cd prototypes/four-layer-detection-system
+python main.py
+python -W error::ResourceWarning -m unittest discover -s tests -v
+```
+
+The prototype suite runs independently in CI on Python 3.10, 3.11, and 3.12.
+Its database-level `UNIQUE` constraint makes batch reruns idempotent, while
+investigator transitions preserve status, assignment, disposition, notes, and
+UTC review timestamps.
+
+---
+
 ## Quick Start
 
 ```bash
