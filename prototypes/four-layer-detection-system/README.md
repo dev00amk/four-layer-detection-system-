@@ -122,13 +122,31 @@ A complete review cycle, start to finish:
    high false-positive counts and low hit rates are the ones to recalibrate
    in `config.py`.
 
-## Development notes
+## Why this matters
 
-- Tests (matches the CI invocation):
+Real fraud queues fail in two ways this prototype is built around. First,
+fixed thresholds generate noise: a $500 transaction is suspicious for one
+user and routine for another, so Layers 2-3 score against each user's own
+history instead of global cutoffs. Second, most rule sets are
+write-once-tune-never: nobody measures which rules actually catch fraud, so
+false-positive fatigue grows silently. Here every investigator disposition
+feeds back into per-rule metrics, making recalibration a routine,
+evidence-based task rather than guesswork. The same loop — detect, triage,
+disposition, measure — is the core of production transaction-monitoring
+programs.
 
-  ```bash
-  python -W error::ResourceWarning -m unittest discover -s tests -v
-  ```
+## Tests / CI
+
+42 unit tests cover the validator contract, every Layer 2 rule and Layer 3
+feature (trigger and non-trigger paths, using synthetic transaction
+histories), the case workflow including `rule_analytics` insert/update, the
+analytics aggregation, and an end-to-end idempotency run over the sample
+batch. CI runs the suite warning-strict across multiple Python versions.
+
+```bash
+python -m unittest discover -s tests -v                          # standard
+python -W error::ResourceWarning -m unittest discover -s tests -v  # CI-exact
+```
 
 - Reset the demo database:
 
