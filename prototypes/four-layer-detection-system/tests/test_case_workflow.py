@@ -121,7 +121,9 @@ class CaseWorkflowTests(unittest.TestCase):
                 "SELECT COUNT(*) FROM risk_alert_signals"
             ).fetchone()[0]
         self.assertEqual(alert_count, 2)
-        self.assertEqual(signal_count, 3)
+        # TXN-1004: rapid count, amount escalation, round amount.
+        # TXN-2001: high amount, round amount.
+        self.assertEqual(signal_count, 5)
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ import streamlit as st
 
 from config import DATABASE_PATH
 from src.layer4_orchestration.case_workflow import assign_alert, close_alert
+from src.layer4_orchestration.rule_analytics import compute_rule_effectiveness
 
 
 ALERT_COLUMNS = [
@@ -363,6 +364,50 @@ def _show_queue_table(frame: pd.DataFrame, empty_message: str) -> None:
     )
 
 
+def _render_rule_analytics() -> None:
+    """Render per-rule hit, confirmed-fraud, and false-positive rates."""
+    try:
+        metrics = compute_rule_effectiveness(DATABASE_PATH)
+    except sqlite3.Error as exc:
+        st.error(f"Unable to load rule analytics: {exc}")
+        return
+    if not metrics:
+        st.caption("No signals have been recorded yet.")
+        return
+
+    frame = pd.DataFrame(metrics)
+    st.caption(
+        "Rates are computed over closed alerts carrying each rule; rules "
+        "without reviewed outcomes yet show no rate."
+    )
+    st.dataframe(
+        frame,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "rule_id": st.column_config.TextColumn("Rule ID", width="medium"),
+            "alert_count": st.column_config.NumberColumn("Alerts"),
+            "hit_rate": st.column_config.NumberColumn(
+                "Hit rate", format="percent"
+            ),
+            "closed_count": st.column_config.NumberColumn("Closed"),
+            "confirmed_fraud_count": st.column_config.NumberColumn(
+                "Confirmed fraud"
+            ),
+            "false_positive_count": st.column_config.NumberColumn(
+                "False positives"
+            ),
+            "confirmed_fraud_rate": st.column_config.NumberColumn(
+                "Confirmed-fraud rate", format="percent"
+            ),
+            "false_positive_rate": st.column_config.NumberColumn(
+                "False-positive rate", format="percent"
+            ),
+        },
+    )
+    st.bar_chart(frame.set_index("rule_id")["alert_count"])
+
+
 def _render_metadata(detail: dict[str, Any]) -> None:
     """Render core case attributes as a legible audit ledger."""
     risk_class = f"risk-{str(detail['risk_level']).lower()}"
@@ -552,8 +597,8 @@ def main() -> None:
         & alerts["risk_level"].isin(selected_risks)
     ]
 
-    open_tab, progress_tab, closed_tab = st.tabs(
-        ["Open Alerts", "In Progress", "Closed"]
+    open_tab, progress_tab, closed_tab, analytics_tab = st.tabs(
+        ["Open Alerts", "In Progress", "Closed", "Rule Analytics"]
     )
     with open_tab:
         _show_queue_table(
@@ -570,6 +615,8 @@ def main() -> None:
             filtered[filtered["status"].isin(["CLOSED", "DISMISSED"])],
             "No closed alerts match the current filters.",
         )
+    with analytics_tab:
+        _render_rule_analytics()
 
     st.header("Alert deep dive")
     detail = load_alert_detail(selected_alert_id)
