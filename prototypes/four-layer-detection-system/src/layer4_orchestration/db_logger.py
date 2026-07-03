@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -16,9 +17,10 @@ def initialize_database(
 ) -> None:
     """Initialize SQLite from the versioned schema file."""
     schema = schema_path.read_text(encoding="utf-8")
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection:
         connection.execute("PRAGMA foreign_keys = ON")
-        connection.executescript(schema)
+        with connection:
+            connection.executescript(schema)
 
 
 def insert_alert(
@@ -27,7 +29,7 @@ def insert_alert(
 ) -> None:
     """Persist an alert and all related signals atomically."""
     signals: list[Signal] = alert["signals"]
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection:
         connection.execute("PRAGMA foreign_keys = ON")
         with connection:
             connection.execute(
@@ -38,8 +40,9 @@ def insert_alert(
                     user_id,
                     risk_level,
                     transaction_payload,
-                    created_at
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    created_at,
+                    status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     alert["alert_id"],
@@ -48,6 +51,7 @@ def insert_alert(
                     alert["risk_level"],
                     json.dumps(alert["transaction"], sort_keys=True),
                     alert["created_at"],
+                    "OPEN",
                 ),
             )
             connection.executemany(
