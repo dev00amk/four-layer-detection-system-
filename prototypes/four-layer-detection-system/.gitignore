@@ -2,3 +2,4 @@ risk_alerts.db
 __pycache__/
 *.pyc
 *.log
+generated_transactions.json

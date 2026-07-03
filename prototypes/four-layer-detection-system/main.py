@@ -81,5 +81,8 @@ def run(
 
 
 if __name__ == "__main__":
-    generated_alerts = run()
+    import sys
+
+    input_path = Path(sys.argv[1]) if len(sys.argv) > 1 else SAMPLE_DATA_PATH
+    generated_alerts = run(sample_data_path=input_path)
     print(json.dumps(generated_alerts, indent=2))

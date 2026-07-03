@@ -7,7 +7,7 @@
 - What's special: behavioral rules and per-user baselines instead of fixed
   thresholds alone, plus a closed feedback loop — every closed case updates
   per-rule confirmed-fraud and false-positive metrics.
-- 42 unit tests, run warning-strict in CI across multiple Python versions.
+- 53 unit tests, run warning-strict in CI across multiple Python versions.
 
 ```text
 JSON transactions
@@ -38,6 +38,21 @@ streamlit run dashboard.py
 
 Open the **Rule Analytics** tab to see which rules are actually catching
 fraud versus generating noise.
+
+Want a richer queue? Generate a fresh synthetic stream that exercises every
+rule — structuring, dormancy break, velocity burst, amount escalation,
+frequency spike, round amounts, off-hours activity — plus silent background
+noise, then ingest it:
+
+```bash
+python generate_traffic.py     # seeded, deterministic scenarios
+python main.py generated_transactions.json
+```
+
+The generator reads its thresholds from `config.py`, so each scenario
+provably triggers its target rule (asserted in
+`tests/test_generate_traffic.py`), and the curated `sample_transactions.json`
+stays untouched.
 
 `main.py` creates `risk_alerts.db`, processes the sample transactions, and
 prints the normalized alerts. Every signal includes a stable rule ID,
@@ -137,11 +152,13 @@ programs.
 
 ## Tests / CI
 
-42 unit tests cover the validator contract, every Layer 2 rule and Layer 3
+53 unit tests cover the validator contract, every Layer 2 rule and Layer 3
 feature (trigger and non-trigger paths, using synthetic transaction
 histories), the case workflow including `rule_analytics` insert/update, the
-analytics aggregation, and an end-to-end idempotency run over the sample
-batch. CI runs the suite warning-strict across multiple Python versions.
+analytics aggregation, an end-to-end idempotency run over the sample batch,
+and the traffic generator (each scripted scenario provably fires its target
+rule; background noise provably fires nothing). CI runs the suite
+warning-strict across multiple Python versions.
 
 ```bash
 python -m unittest discover -s tests -v                          # standard
