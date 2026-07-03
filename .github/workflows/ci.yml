@@ -56,3 +56,42 @@ jobs:
       # dependency set has one clean run, then drop continue-on-error.
       - run: pip-audit --skip-editable
         continue-on-error: true
+
+  api-e2e:
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: pip install -e ".[api]"
+      # Produce a real model artifact, then serve and score over HTTP.
+      - run: |
+          sentinel demo --rows 3000
+          sentinel ingest
+          sentinel enrich
+          sentinel train
+      - name: Serve and score
+        run: |
+          uvicorn service.app:app --port 8000 &
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8000/ready && break
+            sleep 1
+          done
+          curl -fsS http://localhost:8000/health
+          curl -fsS -X POST http://localhost:8000/v1/score \
+            -H "Content-Type: application/json" \
+            -d '{"trip_id":"T1","driver_id":"D1","trip_distance_km":400,"trip_duration_min":30}' \
+            | tee /tmp/score.json
+          python -c "import json; r=json.load(open('/tmp/score.json'))['results'][0]; assert r['score']==10 and r['band']=='CRITICAL+', r"
+
+  docker-build:
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Build-only smoke test; no registry push.
+      - run: docker build -t sentinel-api:ci .
