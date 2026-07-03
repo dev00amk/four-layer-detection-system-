@@ -36,3 +36,19 @@ CREATE INDEX IF NOT EXISTS idx_risk_alert_signals_alert_id
 
 CREATE INDEX IF NOT EXISTS idx_risk_alerts_status
     ON risk_alerts(status, assigned_to);
+
+-- Per-rule outcome ledger: one row per rule per alert, dispositioned when the
+-- alert is closed, powering the dashboard's rule-effectiveness feedback loop.
+CREATE TABLE IF NOT EXISTS rule_analytics (
+    rule_id TEXT NOT NULL,
+    alert_id TEXT NOT NULL,
+    disposition TEXT,
+    reviewed_at TEXT,
+    PRIMARY KEY (rule_id, alert_id),
+    FOREIGN KEY (alert_id)
+        REFERENCES risk_alerts(alert_id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_rule_analytics_rule_id
+    ON rule_analytics(rule_id);

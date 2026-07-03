@@ -8,7 +8,7 @@ from typing import Any
 
 from src.layer4_orchestration.case_workflow import close_alert
 from src.layer4_orchestration.db_logger import initialize_database, insert_alert
-from src.layer4_orchestration.rule_analytics import compute_rule_effectiveness
+from src.layer4_orchestration.rule_analytics import summarize_rule_effectiveness
 
 
 def alert_with_rules(
@@ -49,13 +49,13 @@ class RuleAnalyticsTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
-    def test_returns_empty_metrics_for_empty_database(self) -> None:
+    def test_returns_empty_summary_for_empty_database(self) -> None:
         self.assertEqual(
-            compute_rule_effectiveness(database_path=self.database_path),
+            summarize_rule_effectiveness(database_path=self.database_path),
             [],
         )
 
-    def test_computes_hit_and_disposition_rates_per_rule(self) -> None:
+    def test_summarizes_hits_and_dispositions_per_rule(self) -> None:
         insert_alert(
             alert_with_rules("ALERT-1", "TXN-1", ["DORMANCY_BREAK"]),
             database_path=self.database_path,
@@ -85,42 +85,42 @@ class RuleAnalyticsTests(unittest.TestCase):
             database_path=self.database_path,
         )
 
-        metrics = {
+        summary = {
             row["rule_id"]: row
-            for row in compute_rule_effectiveness(database_path=self.database_path)
+            for row in summarize_rule_effectiveness(
+                database_path=self.database_path
+            )
         }
 
-        dormancy = metrics["DORMANCY_BREAK"]
-        self.assertEqual(dormancy["alert_count"], 2)
-        self.assertEqual(dormancy["hit_rate"], round(2 / 3, 4))
-        self.assertEqual(dormancy["closed_count"], 2)
-        self.assertEqual(dormancy["confirmed_fraud_count"], 1)
-        self.assertEqual(dormancy["false_positive_count"], 1)
-        self.assertEqual(dormancy["confirmed_fraud_rate"], 0.5)
-        self.assertEqual(dormancy["false_positive_rate"], 0.5)
+        dormancy = summary["DORMANCY_BREAK"]
+        self.assertEqual(dormancy["total_hits"], 2)
+        self.assertEqual(dormancy["confirmed_fraud"], 1)
+        self.assertEqual(dormancy["false_positives"], 1)
+        self.assertEqual(dormancy["pending_review"], 0)
+        self.assertEqual(dormancy["hit_rate_pct"], 50.0)
 
-        round_amount = metrics["ROUND_AMOUNT_SUSPICION"]
-        self.assertEqual(round_amount["alert_count"], 2)
-        self.assertEqual(round_amount["closed_count"], 1)
-        self.assertEqual(round_amount["confirmed_fraud_count"], 0)
-        self.assertEqual(round_amount["false_positive_count"], 1)
-        self.assertEqual(round_amount["confirmed_fraud_rate"], 0.0)
-        self.assertEqual(round_amount["false_positive_rate"], 1.0)
+        round_amount = summary["ROUND_AMOUNT_SUSPICION"]
+        self.assertEqual(round_amount["total_hits"], 2)
+        self.assertEqual(round_amount["confirmed_fraud"], 0)
+        self.assertEqual(round_amount["false_positives"], 1)
+        self.assertEqual(round_amount["pending_review"], 1)
+        self.assertEqual(round_amount["hit_rate_pct"], 0.0)
 
-    def test_rates_are_none_until_an_alert_is_reviewed(self) -> None:
+    def test_unreviewed_rule_counts_as_pending(self) -> None:
         insert_alert(
             alert_with_rules("ALERT-1", "TXN-1", ["STRUCTURING_PATTERN"]),
             database_path=self.database_path,
         )
 
-        metrics = compute_rule_effectiveness(database_path=self.database_path)
+        summary = summarize_rule_effectiveness(database_path=self.database_path)
 
-        self.assertEqual(len(metrics), 1)
-        self.assertEqual(metrics[0]["rule_id"], "STRUCTURING_PATTERN")
-        self.assertEqual(metrics[0]["alert_count"], 1)
-        self.assertEqual(metrics[0]["closed_count"], 0)
-        self.assertIsNone(metrics[0]["confirmed_fraud_rate"])
-        self.assertIsNone(metrics[0]["false_positive_rate"])
+        self.assertEqual(len(summary), 1)
+        self.assertEqual(summary[0]["rule_id"], "STRUCTURING_PATTERN")
+        self.assertEqual(summary[0]["total_hits"], 1)
+        self.assertEqual(summary[0]["confirmed_fraud"], 0)
+        self.assertEqual(summary[0]["false_positives"], 0)
+        self.assertEqual(summary[0]["pending_review"], 1)
+        self.assertEqual(summary[0]["hit_rate_pct"], 0.0)
 
 
 if __name__ == "__main__":

@@ -37,6 +37,23 @@ def assign_alert(
                 )
 
 
+def _record_rule_outcomes(
+    connection: sqlite3.Connection,
+    alert_id: str,
+    disposition: str,
+    reviewed_at: str,
+) -> None:
+    """Propagate a closed alert's disposition to its rule_analytics rows."""
+    connection.execute(
+        """
+        UPDATE rule_analytics
+        SET disposition = ?, reviewed_at = ?
+        WHERE alert_id = ?
+        """,
+        (disposition, reviewed_at, alert_id),
+    )
+
+
 def close_alert(
     alert_id: str,
     disposition: str,
@@ -77,3 +94,9 @@ def close_alert(
                 raise ValueError(
                     f"Alert {alert_id!r} does not exist or is not eligible for closure"
                 )
+            _record_rule_outcomes(
+                connection,
+                alert_id,
+                disposition.strip(),
+                reviewed_at,
+            )

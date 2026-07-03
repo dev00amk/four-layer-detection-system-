@@ -13,7 +13,7 @@ import streamlit as st
 
 from config import DATABASE_PATH
 from src.layer4_orchestration.case_workflow import assign_alert, close_alert
-from src.layer4_orchestration.rule_analytics import compute_rule_effectiveness
+from src.layer4_orchestration.rule_analytics import summarize_rule_effectiveness
 
 
 ALERT_COLUMNS = [
@@ -365,47 +365,51 @@ def _show_queue_table(frame: pd.DataFrame, empty_message: str) -> None:
 
 
 def _render_rule_analytics() -> None:
-    """Render per-rule hit, confirmed-fraud, and false-positive rates."""
+    """Render the per-rule effectiveness feedback loop."""
     try:
-        metrics = compute_rule_effectiveness(DATABASE_PATH)
+        metrics = summarize_rule_effectiveness(DATABASE_PATH)
     except sqlite3.Error as exc:
         st.error(f"Unable to load rule analytics: {exc}")
         return
     if not metrics:
-        st.caption("No signals have been recorded yet.")
+        st.info(
+            "No rule activity has been recorded yet. Run `python main.py` "
+            "to generate alerts, then review and close cases to build "
+            "effectiveness data."
+        )
         return
 
     frame = pd.DataFrame(metrics)
-    st.caption(
-        "Rates are computed over closed alerts carrying each rule; rules "
-        "without reviewed outcomes yet show no rate."
-    )
     st.dataframe(
         frame,
         use_container_width=True,
         hide_index=True,
         column_config={
             "rule_id": st.column_config.TextColumn("Rule ID", width="medium"),
-            "alert_count": st.column_config.NumberColumn("Alerts"),
-            "hit_rate": st.column_config.NumberColumn(
-                "Hit rate", format="percent"
-            ),
-            "closed_count": st.column_config.NumberColumn("Closed"),
-            "confirmed_fraud_count": st.column_config.NumberColumn(
+            "total_hits": st.column_config.NumberColumn("Total hits"),
+            "confirmed_fraud": st.column_config.NumberColumn(
                 "Confirmed fraud"
             ),
-            "false_positive_count": st.column_config.NumberColumn(
+            "false_positives": st.column_config.NumberColumn(
                 "False positives"
             ),
-            "confirmed_fraud_rate": st.column_config.NumberColumn(
-                "Confirmed-fraud rate", format="percent"
+            "pending_review": st.column_config.NumberColumn(
+                "Pending review"
             ),
-            "false_positive_rate": st.column_config.NumberColumn(
-                "False-positive rate", format="percent"
+            "hit_rate_pct": st.column_config.NumberColumn(
+                "Hit rate", format="%.1f%%"
             ),
         },
     )
-    st.bar_chart(frame.set_index("rule_id")["alert_count"])
+    st.markdown("#### Confirmed fraud vs. false positives")
+    st.bar_chart(
+        frame.set_index("rule_id")[["confirmed_fraud", "false_positives"]]
+    )
+    st.caption(
+        "Hit rate is confirmed fraud over total hits. Rules with low "
+        "confirmed-fraud and high false-positive counts are generating "
+        "investigator noise and should have their thresholds recalibrated."
+    )
 
 
 def _render_metadata(detail: dict[str, Any]) -> None:

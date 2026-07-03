@@ -37,10 +37,10 @@ individually callable with `(transaction, user_history)`:
 
 Layer 3 per-user statistical baseline features (`src/layer3_ml/features.py`)
 emit LOW-severity context signals: `BASELINE_AMOUNT_DEVIATION` (amount beyond
-2.5 standard deviations of the user's baseline), `UNUSUAL_HOUR_ACTIVITY`
-(hour of day never observed for the user), and `TRANSACTION_GAP_COMPRESSION`
-(inter-transaction gap far below the user's median cadence). All thresholds
-live in `config.py`.
+2.5 standard deviations of the user's baseline), `HOUR_OF_DAY_ANOMALY` (first
+activity in the overnight 00:00-05:59 UTC band), and
+`TRANSACTION_FREQUENCY_SPIKE` (more than 5 transactions within 24 hours).
+All thresholds live in `config.py`.
 
 ## Investigator workflow
 
@@ -59,10 +59,12 @@ Assignment is allowed only from `OPEN`. Closure is allowed from `OPEN` or
 The Streamlit investigator console adds queue metrics, status and risk filters,
 explainable signal review, transaction payload inspection, and guarded
 assignment and closure actions on top of the existing SQLite workflow. A
-Rule Analytics tab closes the feedback loop: for every rule it shows how many
-alerts carried it, its hit rate across the queue, and — once alerts are
-closed — its confirmed-fraud and false-positive rates
-(`src/layer4_orchestration/rule_analytics.py`).
+Rule Analytics tab closes the feedback loop: every signal writes a row into
+the `rule_analytics` table, closing a case stamps those rows with the final
+disposition, and the tab summarizes total hits, confirmed fraud, false
+positives, pending reviews, and hit rate per rule — making noisy rules that
+need recalibration immediately visible
+(`src/layer4_orchestration/rule_analytics.py`, stdlib-only and unit-tested).
 
 ```bash
 pip install -r requirements.txt

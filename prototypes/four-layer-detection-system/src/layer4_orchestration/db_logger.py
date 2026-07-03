@@ -75,3 +75,21 @@ def insert_alert(
                     for signal in signals
                 ],
             )
+            # One outcome row per distinct rule; disposition and reviewed_at
+            # stay NULL until the investigator closes the alert.
+            connection.executemany(
+                """
+                INSERT INTO rule_analytics (
+                    rule_id,
+                    alert_id,
+                    disposition,
+                    reviewed_at
+                ) VALUES (?, ?, NULL, NULL)
+                """,
+                [
+                    (rule_id, alert["alert_id"])
+                    for rule_id in sorted(
+                        {signal["rule_id"] for signal in signals}
+                    )
+                ],
+            )

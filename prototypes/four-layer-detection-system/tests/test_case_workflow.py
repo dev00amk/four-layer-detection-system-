@@ -107,11 +107,73 @@ class CaseWorkflowTests(unittest.TestCase):
                 database_path=self.database_path,
             )
 
+    def test_rule_analytics_rows_inserted_with_alert(self) -> None:
+        alert = sample_alert()
+        alert["signals"].append(
+            {
+                "rule_id": "ROUND_AMOUNT_SUSPICION",
+                "severity": "LOW",
+                "reason": "Round amount.",
+                "metadata": {"amount": 1_500.0, "round_divisor": 500},
+            }
+        )
+        insert_alert(alert, database_path=self.database_path)
+
+        with closing(sqlite3.connect(self.database_path)) as connection:
+            rows = connection.execute(
+                """
+                SELECT rule_id, disposition, reviewed_at
+                FROM rule_analytics
+                WHERE alert_id = ?
+                ORDER BY rule_id
+                """,
+                ("ALERT-1",),
+            ).fetchall()
+
+        self.assertEqual(
+            [row[0] for row in rows],
+            ["HIGH_AMOUNT_THRESHOLD", "ROUND_AMOUNT_SUSPICION"],
+        )
+        for _, disposition, reviewed_at in rows:
+            self.assertIsNone(disposition)
+            self.assertIsNone(reviewed_at)
+
+    def test_rule_analytics_rows_updated_on_alert_close(self) -> None:
+        insert_alert(sample_alert(), database_path=self.database_path)
+
+        close_alert(
+            "ALERT-1",
+            "FALSE_POSITIVE",
+            "Customer verified the purchase.",
+            database_path=self.database_path,
+        )
+
+        alert = self.fetch_alert("ALERT-1")
+        with closing(sqlite3.connect(self.database_path)) as connection:
+            row = connection.execute(
+                """
+                SELECT disposition, reviewed_at
+                FROM rule_analytics
+                WHERE alert_id = ? AND rule_id = ?
+                """,
+                ("ALERT-1", "HIGH_AMOUNT_THRESHOLD"),
+            ).fetchone()
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row[0], "FALSE_POSITIVE")
+        self.assertEqual(row[1], alert["reviewed_at"])
+
     def test_main_rerun_skips_duplicate_transactions(self) -> None:
         first_run = run(database_path=self.database_path)
         second_run = run(database_path=self.database_path)
 
-        self.assertEqual(len(first_run), 2)
+        # One alert per flagged sample transaction:
+        # TXN-1004 (rapid count + escalation + round), TXN-2001 (high
+        # amount + round), TXN-3002 (dormancy), TXN-4005 (structuring),
+        # TXN-5004 (escalation), TXN-5005 (hour of day), TXN-6001 (round),
+        # TXN-7006 (frequency spike), TXN-8006 (high amount + escalation
+        # + round + baseline deviation).
+        self.assertEqual(len(first_run), 9)
         self.assertEqual(second_run, [])
         with closing(sqlite3.connect(self.database_path)) as connection:
             alert_count = connection.execute(
@@ -120,10 +182,12 @@ class CaseWorkflowTests(unittest.TestCase):
             signal_count = connection.execute(
                 "SELECT COUNT(*) FROM risk_alert_signals"
             ).fetchone()[0]
-        self.assertEqual(alert_count, 2)
-        # TXN-1004: rapid count, amount escalation, round amount.
-        # TXN-2001: high amount, round amount.
-        self.assertEqual(signal_count, 5)
+            analytics_count = connection.execute(
+                "SELECT COUNT(*) FROM rule_analytics"
+            ).fetchone()[0]
+        self.assertEqual(alert_count, 9)
+        self.assertEqual(signal_count, 15)
+        self.assertEqual(analytics_count, 15)
 
 
 if __name__ == "__main__":
