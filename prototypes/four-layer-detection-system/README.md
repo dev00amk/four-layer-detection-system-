@@ -1,25 +1,49 @@
 # Lightweight Four-Layer Transaction Detection Prototype
 
-Dependency-free Python 3.10+ reference implementation for transaction validation,
-deterministic velocity and amount rules, a transparent statistical baseline, and
-atomic SQLite alert persistence and investigator case workflow operations.
+- Self-contained fraud/risk operations prototype: transactions in, explainable
+  alerts out, investigator workflow and rule-effectiveness analytics on top.
+- Backend is pure Python 3.10+ standard library; Streamlit + pandas are used
+  only for the dashboard layer.
+- What's special: behavioral rules and per-user baselines instead of fixed
+  thresholds alone, plus a closed feedback loop — every closed case updates
+  per-rule confirmed-fraud and false-positive metrics.
+- 42 unit tests, run warning-strict in CI across multiple Python versions.
 
-This prototype complements the repository's full Spark Driver fraud pipeline. It
-is intentionally small enough to review in one sitting and uses only the Python
-standard library.
+```text
+JSON transactions
+      |
+Layer 1 - Validation / Normalization        src/layer1_ingestion/
+      |
+Layer 2 - Behavioral Rules                  src/layer2_heuristics/
+      |   (velocity, amount, dormancy, structuring, escalation, round amounts)
+Layer 3 - Baseline Features                 src/layer3_ml/
+      |   (z-scores, off-hours activity, frequency spikes)
+Layer 4 - SQLite Alerts + Rule Analytics    src/layer4_orchestration/
+      |
+Streamlit - Triage Ledger Dashboard         dashboard.py
+          (queue tabs, case actions, Rule Analytics)
+```
 
-## Run
+This prototype complements the repository's full Spark Driver fraud pipeline.
+It is intentionally small enough to review in one sitting.
+
+## Try it in 60 seconds
 
 ```bash
 cd prototypes/four-layer-detection-system
-python main.py
-python -m unittest discover -s tests -v
+pip install -r requirements.txt
+python main.py               # generate sample alerts
+streamlit run dashboard.py
 ```
 
-`main.py` creates `risk_alerts.db`, processes the sample transactions, and prints
-the normalized alerts. Every signal includes a stable rule ID, severity, reason,
-and supporting metadata. Transaction IDs are unique at the database boundary, so
-rerunning the sample skips existing alerts instead of duplicating cases.
+Open the **Rule Analytics** tab to see which rules are actually catching
+fraud versus generating noise.
+
+`main.py` creates `risk_alerts.db`, processes the sample transactions, and
+prints the normalized alerts. Every signal includes a stable rule ID,
+severity, reason, and supporting metadata. Transaction IDs are unique at the
+database boundary, so rerunning the sample skips existing alerts instead of
+duplicating cases.
 
 ## Detection content
 
@@ -66,37 +90,49 @@ positives, pending reviews, and hit rate per rule — making noisy rules that
 need recalibration immediately visible
 (`src/layer4_orchestration/rule_analytics.py`, stdlib-only and unit-tested).
 
-```bash
-pip install -r requirements.txt
-python main.py
-streamlit run dashboard.py
-```
-
-Open the local URL printed by Streamlit. The dashboard reads `risk_alerts.db`
-directly and uses the existing `assign_alert()` and `close_alert()` functions
-for lifecycle updates.
+The dashboard reads `risk_alerts.db` directly and uses the existing
+`assign_alert()` and `close_alert()` functions for lifecycle updates.
 
 ![Risk Operations Investigator Console](dashboard-qa.png)
 
 ![Rule Analytics tab with per-rule hit rates and outcome comparison](dashboard-analytics.png)
 
-## Example investigation
+## Example investigation: TXN-8006
 
 A complete review cycle, start to finish:
 
-1. `python main.py` processes the sample batch and persists 9 alerts —
-   every rule and baseline feature fires at least once.
-2. Open the dashboard and select the `TXN-8006` alert: a 5,000.00 payment
-   from a user whose baseline is ~100.00. Four signals explain the risk in
-   plain English: high amount, 50x the user's mean, a suspiciously round
-   amount, and an extreme z-score against the user's own baseline.
-3. Assign the case to yourself from the sidebar (status moves to
-   `IN_PROGRESS`).
-4. Close it with disposition `CONFIRMED_FRAUD` and a short evidence note.
-   The closure atomically stamps the alert's `rule_analytics` rows with the
-   disposition and review timestamp.
+1. Run `python main.py`. It processes the sample batch and persists 9
+   alerts — every rule and baseline feature fires at least once.
+2. Start the dashboard and pick the `TXN-8006` alert from the **Alert ID**
+   selector in the sidebar. The **Explainable signals** panel shows a
+   5,000.00 payment from a user whose baseline is ~100.00, explained by four
+   plain-English signals: high amount, 50x the user's historical mean, a
+   suspiciously round amount, and an extreme z-score against the user's own
+   baseline.
+3. In the sidebar, keep **Action mode** on *Assign Case*, enter an analyst
+   ID, and submit. The alert moves to `IN_PROGRESS` and appears under the
+   **In Progress** queue tab.
+4. Switch **Action mode** to *Close Case*, choose the `CONFIRMED_FRAUD`
+   disposition, add a short evidence note, and submit. The closure
+   atomically stamps the alert's `rule_analytics` rows with the disposition
+   and review timestamp.
 5. Open the **Rule Analytics** tab: every rule that fired on the alert now
    counts one confirmed-fraud outcome, and its hit rate updates.
 6. Repeat over the queue and the tab becomes a tuning report: rules with
    high false-positive counts and low hit rates are the ones to recalibrate
    in `config.py`.
+
+## Development notes
+
+- Tests (matches the CI invocation):
+
+  ```bash
+  python -W error::ResourceWarning -m unittest discover -s tests -v
+  ```
+
+- Reset the demo database:
+
+  ```bash
+  rm risk_alerts.db   # PowerShell: Remove-Item risk_alerts.db
+  python main.py
+  ```

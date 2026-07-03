@@ -37,6 +37,31 @@ preventive product controls and the scenario-based preventable-loss model.
 - [Inspect the canonical coordinated-ring case](cases/CASE_001.md)
 - [Map role requirements to repository evidence](https://dev00amk.github.io/four-layer-detection-system-/#skills)
 
+## Lightweight Risk Ops Prototype
+
+The [`prototypes/four-layer-detection-system`](prototypes/four-layer-detection-system/)
+directory contains a self-contained fraud/risk operations prototype:
+
+- **Layered detection** — schema validation, deterministic behavioral rules
+  (dormancy breaks, structuring, amount escalation), and per-user baseline
+  features (z-scores, off-hours activity, frequency spikes)
+- **Case workflow** — SQLite-backed alert lifecycle (open → in progress →
+  closed) with auditable dispositions
+- **Investigator console** — Streamlit "Triage Ledger" dashboard with queue
+  tabs and a Rule Analytics feedback loop that measures each rule by
+  confirmed fraud, false positives, and pending review
+
+Run it locally:
+
+```bash
+cd prototypes/four-layer-detection-system
+pip install -r requirements.txt
+python main.py
+streamlit run dashboard.py
+```
+
+![Rule Analytics dashboard](prototypes/four-layer-detection-system/dashboard-analytics.png)
+
 > A reproducible portfolio study of mixed-signal fraud analysis, false-positive controls,
 > structured investigation, and cross-functional reporting.
 
