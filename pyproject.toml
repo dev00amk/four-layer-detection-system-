@@ -87,6 +87,7 @@ disallow_untyped_defs = true
 [[tool.mypy.overrides]]
 module = [
     "duckdb.*",
+    "joblib.*",
     "networkx.*",
     "pandas.*",
     "requests.*",

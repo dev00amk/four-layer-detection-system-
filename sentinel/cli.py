@@ -15,12 +15,13 @@ from sentinel.config import GOLD, GRAPH, RAW, SILVER, settings
 from sentinel.db import get_connection, get_cross_role_df, get_scored_inputs
 from sentinel.demo import generate_demo
 from sentinel.enrich import enrich
-from sentinel.exceptions import SentinelError
+from sentinel.exceptions import ModelError, SentinelError
 from sentinel.feedback import generate_feedback_report
 from sentinel.graph import build_graph
 from sentinel.ingest import ingest
 from sentinel.logger import configure_logging, set_run_id
 from sentinel.model import SentinelModel
+from sentinel.model_store import load_model, save_model
 from sentinel.osint import enrich_critical_drivers
 
 log = logging.getLogger("sentinel.cli")
@@ -49,13 +50,34 @@ def demo_command(rows: int, seed: int) -> None:
     identity.to_csv(RAW / "train_identity.csv", index=False)
 
 
-def score_command() -> None:
+def train_command() -> None:
+    """Fit the model on the silver dataset and persist the artifact."""
+    _require(SILVER / "spark_driver_trips.parquet")
+    df = pd.read_parquet(SILVER / "spark_driver_trips.parquet")
+    model = SentinelModel().fit(df, df["isFraud"].astype(int))
+    save_model(model)
+    log.info("training_summary", extra=dict(model.metrics))
+
+
+def _obtain_model(df: pd.DataFrame, retrain: bool) -> SentinelModel:
+    """Load the persisted model, or (re)train and persist when asked/missing."""
+    if not retrain:
+        try:
+            return load_model()
+        except (ModelError, OSError) as exc:
+            log.warning("no_usable_artifact_retraining", extra={"reason": str(exc)})
+    model = SentinelModel().fit(df, df["isFraud"].astype(int))
+    save_model(model)
+    return model
+
+
+def score_command(retrain: bool = False) -> None:
     _require(SILVER / "spark_driver_trips.parquet")
     build_graph()
     df = pd.read_parquet(SILVER / "spark_driver_trips.parquet")
     with get_connection() as con:
         graph_flags, ring_sizes, sql_hits = get_scored_inputs(con, df, GRAPH / "fraud_rings.csv")
-    model = SentinelModel().fit(df, df["isFraud"].astype(int))
+    model = _obtain_model(df, retrain)
     scored = model.predict(df, graph_flags, ring_sizes, sql_hits)
     explanations = model.explain(df)
     scored.to_parquet(GOLD / "scored_trips.parquet", index=False)
@@ -90,7 +112,8 @@ def full_command(rows: int, seed: int) -> None:
     demo_command(rows, seed)
     ingest()
     enrich(seed)
-    score_command()
+    # The demo flow regenerates data each run, so the model retrains too.
+    score_command(retrain=True)
     cases_command()
     osint_command()
 
@@ -98,10 +121,16 @@ def full_command(rows: int, seed: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Project Sentinel fraud detection pipeline")
     parser.add_argument(
-        "command", choices=["demo", "ingest", "enrich", "score", "cases", "report", "full"]
+        "command",
+        choices=["demo", "ingest", "enrich", "train", "score", "cases", "report", "full"],
     )
     parser.add_argument("--rows", type=int, default=12_000)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--retrain",
+        action="store_true",
+        help="force score to refit and persist the model instead of loading the artifact",
+    )
     args = parser.parse_args()
     configure_logging()
     set_run_id()
@@ -109,7 +138,8 @@ def main() -> None:
         "demo": lambda: demo_command(args.rows, args.seed),
         "ingest": ingest,
         "enrich": lambda: enrich(args.seed),
-        "score": score_command,
+        "train": train_command,
+        "score": lambda: score_command(retrain=args.retrain),
         "cases": cases_command,
         "report": generate_feedback_report,
         "full": lambda: full_command(args.rows, args.seed),
