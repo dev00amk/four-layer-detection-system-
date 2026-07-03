@@ -77,3 +77,26 @@ directly and uses the existing `assign_alert()` and `close_alert()` functions
 for lifecycle updates.
 
 ![Risk Operations Investigator Console](dashboard-qa.png)
+
+![Rule Analytics tab with per-rule hit rates and outcome comparison](dashboard-analytics.png)
+
+## Example investigation
+
+A complete review cycle, start to finish:
+
+1. `python main.py` processes the sample batch and persists 9 alerts —
+   every rule and baseline feature fires at least once.
+2. Open the dashboard and select the `TXN-8006` alert: a 5,000.00 payment
+   from a user whose baseline is ~100.00. Four signals explain the risk in
+   plain English: high amount, 50x the user's mean, a suspiciously round
+   amount, and an extreme z-score against the user's own baseline.
+3. Assign the case to yourself from the sidebar (status moves to
+   `IN_PROGRESS`).
+4. Close it with disposition `CONFIRMED_FRAUD` and a short evidence note.
+   The closure atomically stamps the alert's `rule_analytics` rows with the
+   disposition and review timestamp.
+5. Open the **Rule Analytics** tab: every rule that fired on the alert now
+   counts one confirmed-fraud outcome, and its hit rate updates.
+6. Repeat over the queue and the tab becomes a tuning report: rules with
+   high false-positive counts and low hit rates are the ones to recalibrate
+   in `config.py`.
