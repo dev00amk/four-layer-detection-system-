@@ -31,11 +31,9 @@ from sentinel.enrich import enrich  # noqa: E402
 from sentinel.ingest import ingest  # noqa: E402
 
 
-@pytest.fixture()
-def synthetic_trips() -> pd.DataFrame:
+def make_synthetic_trips(n: int = 200, seed: int = 7) -> pd.DataFrame:
     """Small deterministic trip frame covering every SentinelModel feature."""
-    rng = np.random.default_rng(7)
-    n = 200
+    rng = np.random.default_rng(seed)
     fraud = rng.random(n) < 0.10
     return pd.DataFrame(
         {
@@ -75,6 +73,11 @@ def synthetic_trips() -> pd.DataFrame:
             "new_device_flag": np.zeros(n, dtype=int),
         }
     )
+
+
+@pytest.fixture()
+def synthetic_trips() -> pd.DataFrame:
+    return make_synthetic_trips()
 
 
 @pytest.fixture(scope="session")

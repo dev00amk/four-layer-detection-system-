@@ -14,8 +14,9 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
-      - run: ruff check sentinel tests run.py
-      - run: mypy sentinel run.py
+      - run: pip install -e ".[api]"
+      - run: ruff check sentinel service tests run.py
+      - run: mypy sentinel service run.py
 
   test:
     needs: quality
@@ -31,6 +32,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: pip install -r requirements.txt
+      - run: pip install -e ".[api]"
       - run: pytest --cov-report=xml
       - uses: actions/upload-artifact@v4
         if: matrix.python-version == '3.11'
