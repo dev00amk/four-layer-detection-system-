@@ -32,3 +32,21 @@ close_alert("alert-id", "CONFIRMED_FRAUD", "Evidence reviewed and documented.")
 
 Assignment is allowed only from `OPEN`. Closure is allowed from `OPEN` or
 `IN_PROGRESS`, and records an ISO-8601 UTC review timestamp.
+
+## Dashboard
+
+The Streamlit investigator console adds queue metrics, status and risk filters,
+explainable signal review, transaction payload inspection, and guarded
+assignment and closure actions on top of the existing SQLite workflow.
+
+```bash
+pip install -r requirements.txt
+python main.py
+streamlit run dashboard.py
+```
+
+Open the local URL printed by Streamlit. The dashboard reads `risk_alerts.db`
+directly and uses the existing `assign_alert()` and `close_alert()` functions
+for lifecycle updates.
+
+![Risk Operations Investigator Console](dashboard-qa.png)
