@@ -7,7 +7,7 @@
 - What's special: behavioral rules and per-user baselines instead of fixed
   thresholds alone, plus a closed feedback loop — every closed case updates
   per-rule confirmed-fraud and false-positive metrics.
-- 53 unit tests, run warning-strict in CI across multiple Python versions.
+- 54 unit tests, run warning-strict in CI across multiple Python versions.
 
 ```text
 JSON transactions
@@ -32,33 +32,40 @@ It is intentionally small enough to review in one sitting.
 ```bash
 cd prototypes/four-layer-detection-system
 pip install -r requirements.txt
-python main.py               # generate sample alerts
+python generate_traffic.py                  # seeded synthetic fraud scenarios
+python main.py generated_transactions.json  # score and persist alerts
 streamlit run dashboard.py
 ```
 
 Open the **Rule Analytics** tab to see which rules are actually catching
-fraud versus generating noise.
+fraud versus generating noise. (Prefer the small curated batch instead?
+`python main.py` with no argument processes `sample_transactions.json`.)
 
-Want a richer queue? Generate a fresh synthetic stream that exercises every
-rule — structuring, dormancy break, velocity burst, amount escalation,
-frequency spike, round amounts, off-hours activity — plus silent background
-noise, then ingest it:
-
-```bash
-python generate_traffic.py     # seeded, deterministic scenarios
-python main.py generated_transactions.json
-```
-
-The generator reads its thresholds from `config.py`, so each scenario
-provably triggers its target rule (asserted in
-`tests/test_generate_traffic.py`), and the curated `sample_transactions.json`
-stays untouched.
-
-`main.py` creates `risk_alerts.db`, processes the sample transactions, and
+`main.py` creates `risk_alerts.db`, processes the input transactions, and
 prints the normalized alerts. Every signal includes a stable rule ID,
 severity, reason, and supporting metadata. Transaction IDs are unique at the
-database boundary, so rerunning the sample skips existing alerts instead of
-duplicating cases.
+database boundary, so rerunning the same batch skips existing alerts instead
+of duplicating cases.
+
+### Synthetic scenarios
+
+`generate_traffic.py` produces a deterministic 46-transaction stream (seeded
+amounts via `--seed`, thresholds imported from `config.py` so they never
+drift from the rules). It writes to `generated_transactions.json`, leaving
+the curated `sample_transactions.json` untouched for CI. Each scripted user
+yields exactly one alert — asserted end-to-end in
+`tests/test_generate_traffic.py`:
+
+| User | Pattern | Fires |
+| --- | --- | --- |
+| `USER-STRUCTURING` | 5 payments ≈900 inside 72h, aggregate >3,500 | `STRUCTURING_PATTERN` |
+| `USER-DORMANT` | 60-day gap, then an 850.00 payment | `DORMANCY_BREAK` |
+| `USER-VELOCITY` | 4 card-testing payments inside 10 minutes | `RAPID_TRANSACTION_COUNT` |
+| `USER-ESCALATION` | ~50/day for six days, then 450.00 | `RAPID_AMOUNT_ESCALATION` + `BASELINE_AMOUNT_DEVIATION` |
+| `USER-BURST` | 6 payments inside 24 hours | `TRANSACTION_FREQUENCY_SPIKE` |
+| `USER-ROUND` | single 2,000.00 payment, no history | `ROUND_AMOUNT_SUSPICION` + `HIGH_AMOUNT_THRESHOLD` |
+| `USER-NIGHT-OWL` | daytime history, first activity at 03:14 UTC | `HOUR_OF_DAY_ANOMALY` |
+| `USER-NOISE-1..3` | steady 40–90 daily spending | nothing, by design |
 
 ## Detection content
 
@@ -95,9 +102,11 @@ Assignment is allowed only from `OPEN`. Closure is allowed from `OPEN` or
 
 ## Dashboard
 
-The Streamlit investigator console adds queue metrics, status and risk filters,
-explainable signal review, transaction payload inspection, and guarded
-assignment and closure actions on top of the existing SQLite workflow. A
+The Streamlit investigator console shows the alert queue in **Open Alerts**,
+**In Progress**, and **Closed** tabs, with queue metrics, status and risk
+filters, explainable per-alert signals, transaction payload inspection, and
+guarded assignment and closure actions on top of the existing SQLite
+workflow. A
 Rule Analytics tab closes the feedback loop: every signal writes a row into
 the `rule_analytics` table, closing a case stamps those rows with the final
 disposition, and the tab summarizes total hits, confirmed fraud, false
@@ -152,7 +161,7 @@ programs.
 
 ## Tests / CI
 
-53 unit tests cover the validator contract, every Layer 2 rule and Layer 3
+54 unit tests cover the validator contract, every Layer 2 rule and Layer 3
 feature (trigger and non-trigger paths, using synthetic transaction
 histories), the case workflow including `rule_analytics` insert/update, the
 analytics aggregation, an end-to-end idempotency run over the sample batch,

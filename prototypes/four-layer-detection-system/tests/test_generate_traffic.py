@@ -1,8 +1,13 @@
+import json
+import tempfile
 import unittest
+from collections import Counter
 from datetime import datetime
+from pathlib import Path
 
 from config import SUSPICIOUS_HOUR_END, SUSPICIOUS_HOUR_START
 from generate_traffic import build_scenarios
+from main import run
 from src.layer1_ingestion.validator import Transaction, validate_transaction
 from src.layer2_heuristics.rules import evaluate_rules
 from src.layer3_ml.features import evaluate_baseline_deviation
@@ -82,6 +87,58 @@ class GenerateTrafficTests(unittest.TestCase):
         self.assertEqual(
             [(item["user_id"], item["amount"]) for item in first],
             [(item["user_id"], item["amount"]) for item in second],
+        )
+
+
+class GeneratedStreamEndToEndTests(unittest.TestCase):
+    """Prove the generated stream's alert contract through the real pipeline."""
+
+    def test_exactly_one_alert_per_scripted_scenario(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            stream_path = Path(temporary_directory) / "generated.json"
+            database_path = Path(temporary_directory) / "test.db"
+            stream_path.write_text(
+                json.dumps(build_scenarios(seed=42)), encoding="utf-8"
+            )
+
+            alerts = run(
+                database_path=database_path, sample_data_path=stream_path
+            )
+
+        alerts_by_user = Counter(
+            alert["transaction"]["user_id"] for alert in alerts
+        )
+        self.assertEqual(
+            dict(alerts_by_user),
+            {
+                "USER-STRUCTURING": 1,
+                "USER-DORMANT": 1,
+                "USER-VELOCITY": 1,
+                "USER-ESCALATION": 1,
+                "USER-BURST": 1,
+                "USER-ROUND": 1,
+                "USER-NIGHT-OWL": 1,
+            },
+        )
+
+        fired_rule_ids = {
+            signal["rule_id"]
+            for alert in alerts
+            for signal in alert["signals"]
+        }
+        self.assertEqual(
+            fired_rule_ids,
+            {
+                "STRUCTURING_PATTERN",
+                "DORMANCY_BREAK",
+                "RAPID_TRANSACTION_COUNT",
+                "RAPID_AMOUNT_ESCALATION",
+                "BASELINE_AMOUNT_DEVIATION",
+                "TRANSACTION_FREQUENCY_SPIKE",
+                "ROUND_AMOUNT_SUSPICION",
+                "HIGH_AMOUNT_THRESHOLD",
+                "HOUR_OF_DAY_ANOMALY",
+            },
         )
 
 
