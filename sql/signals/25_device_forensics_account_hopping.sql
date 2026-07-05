@@ -49,7 +49,20 @@
 -- - Synthetic Device Collisions: Gated on payout corroboration to avoid a 96% false-positive rate
 --   caused by synthetic device ID collisions in the evaluation dataset.
 --
--- 6. ACKNOWLEDGED BLIND SPOT
+-- 6. METRICS & EVALUATION QUEUE (VERSION 1.0)
+-- ------------------------------------------
+-- - Dataset Version: Seed 42, 240 bronze transactions / 486 silver drivers.
+-- - Base Rate: 11.31%
+-- - Flagged Drivers: 48
+-- - Confirmed Fraud: 15
+-- - Innocent Bystanders Excluded: 33 (Clean/Legit)
+-- - Driver-Level Precision: 31.25% (Requires Routing to Manual Investigation Queue; not for auto-enforcement)
+-- - Driver-Level Recall: 27.27% (15 of 55 fraud drivers)
+-- - Planted-Flag Caveat: The payout_change_72h indicator runs at 1.7% on legit trips vs 28.1% on fraud
+--   trips because it is label-correlated by construction in the synthetic generator. This 31.25% precision
+--   proves the plumbing and query structure, but does not represent true production-grade precision.
+--
+-- 7. ACKNOWLEDGED BLIND SPOT
 -- --------------------------
 -- A spoofer operating a single, custom-rooted device or hardware GPS relay who maintains a stable
 -- device footprint, keeps transit speeds below 400 km/h, and does not run concurrent trips on
@@ -78,22 +91,25 @@ SELECT DISTINCT driver_id FROM (
   -- Tier 2: Suspicious Activity (bidirectional device reuse or high-risk profile + payout change)
   SELECT DISTINCT t.driver_id
   FROM spark_trips t
-  WHERE (
-    t.device_id IN (
-      SELECT DISTINCT device_id
-      FROM (
-        SELECT 
-          device_id,
-          driver_id,
-          LAG(driver_id) OVER (PARTITION BY device_id ORDER BY trip_start_ts) AS prev_driver,
-          LEAD(driver_id) OVER (PARTITION BY device_id ORDER BY trip_start_ts) AS next_driver
-        FROM spark_trips
-      )
-      WHERE prev_driver IS NOT NULL 
-        AND next_driver IS NOT NULL
-        AND driver_id != prev_driver 
-        AND prev_driver = next_driver
+  LEFT JOIN (
+    SELECT DISTINCT device_id, driver_id, prev_driver
+    FROM (
+      SELECT 
+        device_id,
+        driver_id,
+        LAG(driver_id) OVER (PARTITION BY device_id ORDER BY trip_start_ts) AS prev_driver,
+        LEAD(driver_id) OVER (PARTITION BY device_id ORDER BY trip_start_ts) AS next_driver
+      FROM spark_trips
     )
+    WHERE prev_driver IS NOT NULL 
+      AND next_driver IS NOT NULL
+      AND driver_id != prev_driver 
+      AND prev_driver = next_driver
+  ) rot
+    ON t.device_id = rot.device_id
+   AND (t.driver_id = rot.driver_id OR t.driver_id = rot.prev_driver)
+  WHERE (
+    rot.device_id IS NOT NULL
     OR
     t.device_id IN (
       SELECT device_id

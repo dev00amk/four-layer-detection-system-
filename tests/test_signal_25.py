@@ -60,7 +60,12 @@ def get_mock_trips_df():
         {"driver_id": "D_BLIND_A", "trip_id": "T18", "trip_start_ts": "2026-07-05 12:00:00", "trip_end_ts": "2026-07-05 12:30:00",
          "pickup_lat": 40.7128, "pickup_lon": -74.0060, "device_id": "DEV_STABLE", "payout_account": "BANK_BLIND", "payout_change_72h": 0, "emulator_flag": 0, "rooted_device_flag": 1},
         {"driver_id": "D_BLIND_A", "trip_id": "T19", "trip_start_ts": "2026-07-05 13:00:00", "trip_end_ts": "2026-07-05 13:30:00",
-         "pickup_lat": 40.7128, "pickup_lon": -74.0060, "device_id": "DEV_STABLE", "payout_account": "BANK_BLIND", "payout_change_72h": 0, "emulator_flag": 0, "rooted_device_flag": 1}
+         "pickup_lat": 40.7128, "pickup_lon": -74.0060, "device_id": "DEV_STABLE", "payout_account": "BANK_BLIND", "payout_change_72h": 0, "emulator_flag": 0, "rooted_device_flag": 1},
+
+        # 9. D_BYSTANDER: bystander who used the rotated device DEV_T2 but was not part of the A -> B -> A rotation
+        # Should NOT trigger despite having a payout change
+        {"driver_id": "D_BYSTANDER", "trip_id": "T20", "trip_start_ts": "2026-07-05 15:00:00", "trip_end_ts": "2026-07-05 15:30:00",
+         "pickup_lat": 40.7128, "pickup_lon": -74.0060, "device_id": "DEV_T2", "payout_account": "BANK_BYSTANDER", "payout_change_72h": 1, "emulator_flag": 0, "rooted_device_flag": 0}
     ]
     df = pd.DataFrame(trips_data)
     df["trip_start_ts"] = pd.to_datetime(df["trip_start_ts"])
@@ -140,3 +145,9 @@ def test_acknowledged_blind_spot_evades():
     df = get_mock_trips_df()
     triggered = run_duckdb_signal(df)
     assert "D_BLIND_A" not in triggered
+
+
+def test_bystander_leak_exclusion():
+    df = get_mock_trips_df()
+    triggered = run_duckdb_signal(df)
+    assert "D_BYSTANDER" not in triggered
