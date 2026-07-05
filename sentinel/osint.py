@@ -167,20 +167,20 @@ class OsintEnrichmentPackage:
     def to_markdown_table(self) -> str:
         """Render results as the OSINT matrix table for the case file."""
         lines = [
-            "| # | Step | Source type | Query / method | Result | Confidence | Risk signal |",
-            "|---|------|------------|----------------|--------|-----------|------------|",
+            "| # | Step | Source type | Query / method | Result (SIMULATED — illustrative only) | Confidence | Risk signal |",
+            "|---|------|------------|----------------|----------------------------------------|-----------|------------|",
         ]
         for i, r in enumerate(self.results, 1):
             risk_icon = "⚠️ YES" if r.risk_signal else "✓ NO"
             lines.append(
                 f"| {i} | {r.step_label} | {r.source_type} | "
-                f"{r.query_method} | **{r.result_code}** — {r.result_detail} | "
+                f"{r.query_method} | [SIMULATED] **{r.result_code}** — {r.result_detail} | "
                 f"{r.confidence} | {risk_icon} |"
             )
         lines.append("")
         lines.append(f"*Steps completed: {self.steps_completed} | "
                      f"Risk signals: {self.steps_with_risk_signal} | "
-                     f"Overall OSINT risk: **{self.overall_osint_risk}***")
+                     f"Overall OSINT risk: **{self.overall_osint_risk} (SIMULATED — illustrative only)***")
         lines.append("")
         lines.append(f"*Scope: {self.scope_note}*")
         return "\n".join(lines)

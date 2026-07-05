@@ -61,38 +61,13 @@ def _generate_narrative(row, collusion_count) -> str:
 
 
 def _generate_fp_table(osint_package, row) -> str:
-    osint_map = {r.step_id: r for r in osint_package.results}
+    device_status = "**UNVERIFIED** (SIMULATED — illustrative only)"
+    payout_status = "**UNVERIFIED** (SIMULATED — illustrative only)"
+    gps_status = "**UNVERIFIED** (SIMULATED — illustrative only)"
+    address_status = "**UNVERIFIED** (SIMULATED — illustrative only)"
     
-    shared_device_osint = osint_map.get("device_intelligence")
-    if shared_device_osint and shared_device_osint.result_code == "CLEAN":
-        device_status = "**VERIFIED** (No fraud signatures detected)"
-    elif shared_device_osint and shared_device_osint.result_code == "FLAGGED":
-        device_status = "**FLAGGED** (Suspicious device signatures)"
-    else:
-        device_status = "**UNVERIFIED** (Pending device intelligence checks)"
-        
-    payout_change = int(getattr(row, "payout_change_72h", 0))
-    if payout_change == 0:
-        payout_status = "**VERIFIED** (No recent payout changes)"
-    else:
-        payout_status = "**FLAGGED** (Recent bank details change)"
-        
-    impossible_travel = "F01" in getattr(row, "fatal_signal_ids", "")
-    if impossible_travel:
-        gps_status = "**FLAGGED** (Telemetry shows impossible travel)"
-    else:
-        gps_status = "**VERIFIED** (GPS signals within plausible bounds)"
-        
-    address_osint = osint_map.get("address_verification")
-    if address_osint and address_osint.result_code == "RESIDENTIAL":
-        address_status = "**VERIFIED** (Verified residential address)"
-    elif address_osint and address_osint.result_code == "COMMERCIAL_MAILBOX":
-        address_status = "**FLAGGED** (Commercial mailbox detected)"
-    else:
-        address_status = "**UNVERIFIED** (Pending address checks)"
-        
     lines = [
-        "| Legitimate Behavior | Exclusion Logic / Check | Automated Status | Action Required |",
+        "| Legitimate Behavior | Exclusion Logic / Check | Automated Status (Simulation Mode) | Action Required |",
         "| :--- | :--- | :--- | :--- |",
         f"| **Family Sharing Device** | Shared-household / device risk check | {device_status} | Review account log for driver name hopping |",
         f"| **Legitimate Payout Change** | Bank account tenure check | {payout_status} | Contact driver to confirm bank details change |",
