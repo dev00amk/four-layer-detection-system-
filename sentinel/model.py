@@ -125,6 +125,7 @@ class SentinelModel:
         graph_flags: pd.Series | np.ndarray,
         ring_sizes: pd.Series | np.ndarray,
         sql_hits: pd.Series | np.ndarray,
+        triggered_signals: pd.Series | np.ndarray | None = None,
     ) -> pd.DataFrame:
         X = self._matrix(df)
         xgb_prob = self.xgb.predict_proba(X)[:, 1]
@@ -153,6 +154,7 @@ class SentinelModel:
                 "graph_flag": np.asarray(graph_flags),
                 "ring_size": np.asarray(ring_sizes),
                 "sql_hits": np.asarray(sql_hits),
+                "triggered_signals": np.asarray(triggered_signals) if triggered_signals is not None else np.array([""] * len(df)),
                 "score": score,
                 "is_fatal": is_fatal,
                 "fatal_signal_ids": fatal_ids,

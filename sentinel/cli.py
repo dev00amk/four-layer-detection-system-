@@ -65,7 +65,7 @@ def score_command(retrain: bool = False) -> None:
     con = get_connection()
     try:
         df = pd.read_parquet(SILVER / "spark_driver_trips.parquet")
-        graph_flags, ring_sizes, sql_hits = get_scored_inputs(
+        graph_flags, ring_sizes, sql_hits, triggered_signals = get_scored_inputs(
             con, df, GRAPH / "fraud_rings.csv"
         )
     finally:
@@ -75,7 +75,7 @@ def score_command(retrain: bool = False) -> None:
         save_model(model)
     else:
         model = load_model()
-    scored = model.predict(df, graph_flags, ring_sizes, sql_hits)
+    scored = model.predict(df, graph_flags, ring_sizes, sql_hits, triggered_signals)
     explanations = model.explain(df)
     scored.to_parquet(GOLD / "scored_trips.parquet", index=False)
     explanations.to_parquet(GOLD / "shap_explanations.parquet", index=False)

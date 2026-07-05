@@ -46,15 +46,21 @@ def get_scored_inputs(
     con: duckdb.DuckDBPyConnection,
     feature_df: pd.DataFrame,
     graph_csv: Path | None = None,
-) -> tuple[pd.Series, pd.Series, pd.Series]:
+) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
     from .graph import get_ring_flags
     from .signals import run_signals
 
     driver_ids = feature_df["driver_id"] if "driver_id" in feature_df else feature_df.index.to_series()
-    sql = run_signals(con).set_index("driver_id")["hit_count"]
+    signals_df = run_signals(con).set_index("driver_id")
+    sql = signals_df["hit_count"]
     sql_hits = driver_ids.map(sql).fillna(0).astype(float)
+    
+    triggered = signals_df["triggered_signals"]
+    triggered_signals = driver_ids.map(triggered).fillna("").astype(str)
+
     graph_flags, ring_sizes = get_ring_flags(driver_ids, graph_csv)
     sql_hits.index = feature_df.index
+    triggered_signals.index = feature_df.index
     graph_flags.index = feature_df.index
     ring_sizes.index = feature_df.index
-    return graph_flags, ring_sizes, sql_hits
+    return graph_flags, ring_sizes, sql_hits, triggered_signals
