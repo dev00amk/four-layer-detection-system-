@@ -16,21 +16,28 @@
 --    spikes in accuracy, shifting the apparent position by hundreds of meters between pings.
 -- C. Timezone / Clock-Skew Artifacts: Local device time changes or clock synchronization
 --    delays cause the registered timestamps to appear closer together than they physically are.
--- D. Multi-Modal Transit (Ferry/Train): The driver boards a ferry or train with their phone,
---    resulting in high transit speeds over water or rail where they are not physically driving.
+-- D. High-Speed Rail / Multi-Modal Transit: The driver boards high-speed rail (e.g., Acela Express
+--    at ~250 km/h) with their phone, resulting in high transit speeds where they are not driving.
 --
 -- 3. EXCLUSION & MITIGATION LOGIC
 -- ------------------------------
--- A. Highway driving: implied speed threshold is set to 180 kph (implied_kph > 180).
---    This is a safe physical ceiling that no motor vehicle can legitimately maintain on roads.
--- B. GPS Multipath: gated on gps_accuracy_m <= 80. Coarse GPS locks with high error bounds
---    are programmatically ignored.
--- C. Clock-Skew / Timezone shifts: requires COUNT(*) >= 2 separate impossible segments
---    per driver. A single timestamp glitch or clock jump is rejected.
--- D. Multi-modal / App anomalies: requires MAX(emulator_flag + gps_mock_flag) >= 1.
---    The presence of impossible transit must be corroborated by hardware-level compromises
---    (emulator environments or active developer mock location settings) to prevent flagging
---    legitimate ferry/train passengers.
+-- A. Highway driving: Gated out by speed threshold (implied_kph > 180).
+-- B. GPS Multipath: Gated out by GPS accuracy requirement (gps_accuracy_m <= 80).
+-- C. Clock-Skew / Timezone shifts: Requires COUNT(*) >= 2 separate impossible segments.
+-- D. High-Speed Rail vs. Evasion Hole (Two-Tier Design):
+--    - Tier 1 (implied_kph > 400): Exceeds any commercial rail or surface transit. This is
+--      physically impossible on land, so it triggers IMMEDIATELY with no device flag required.
+--      This closes the evasion hole for spoofers on clean/custom-rooted devices.
+--    - Tier 2 (implied_kph BETWEEN 180 AND 400): Overlaps with high-speed rail (~250 km/h).
+--      To prevent false positives on clean-phone rail passengers, this tier REQUIRES active
+--      hardware compromise indicators (emulator_flag + gps_mock_flag >= 1).
+--
+-- 4. ACKNOWLEDGED BLIND SPOT
+-- --------------------------
+-- A spoofer holding speeds between 180 and 400 km/h on a clean/rooted device (avoiding emulator
+-- and developer mock flags) will evade this signal. This is a deliberate, documented trade-off
+-- to avoid false-positive flagging of legitimate commuters. This residual risk is covered by
+-- Graph payout cluster checks and Signal 25 (device-forensics account-hopping).
 --
 -- ===========================================================================
 
@@ -62,4 +69,10 @@ WHERE implied_kph > 180
   AND gps_accuracy_m <= 80
 GROUP BY driver_id
 HAVING COUNT(*) >= 2
-  AND MAX(emulator_flag + gps_mock_flag) >= 1;
+  AND (
+    -- Tier 1: Physically impossible land speed (no device compromise required)
+    MAX(implied_kph) > 400
+    OR
+    -- Tier 2: Bullet-train overlap band (requires hardware compromise indicators)
+    (MAX(implied_kph) <= 400 AND MAX(emulator_flag + gps_mock_flag) >= 1)
+  );
