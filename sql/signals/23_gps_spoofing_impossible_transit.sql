@@ -30,7 +30,7 @@
 --      This closes the evasion hole for spoofers on clean/custom-rooted devices.
 --    - Tier 2 (implied_kph BETWEEN 180 AND 400): Overlaps with high-speed rail (~250 km/h).
 --      To prevent false positives on clean-phone rail passengers, this tier REQUIRES active
---      hardware compromise indicators (emulator_flag + gps_mock_flag >= 1).
+--      hardware compromise indicators (emulator_flag + gps_mock_flag >= 1) ON THE SAME SEGMENT.
 --
 -- 4. ACKNOWLEDGED BLIND SPOT
 -- --------------------------
@@ -67,12 +67,12 @@ SELECT driver_id
 FROM segments
 WHERE implied_kph > 180
   AND gps_accuracy_m <= 80
-GROUP BY driver_id
-HAVING COUNT(*) >= 2
   AND (
     -- Tier 1: Physically impossible land speed (no device compromise required)
-    MAX(implied_kph) > 400
+    implied_kph > 400
     OR
-    -- Tier 2: Bullet-train overlap band (requires hardware compromise indicators)
-    (MAX(implied_kph) <= 400 AND MAX(emulator_flag + gps_mock_flag) >= 1)
-  );
+    -- Tier 2: Bullet-train overlap band (requires hardware compromise indicators on the SAME segment)
+    (implied_kph <= 400 AND (emulator_flag + gps_mock_flag) >= 1)
+  )
+GROUP BY driver_id
+HAVING COUNT(*) >= 2;

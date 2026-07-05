@@ -91,7 +91,19 @@ def get_mock_trips_df():
          "gps_accuracy_m": 10, "emulator_flag": 0, "gps_mock_flag": 0},
         {"driver_id": "D_FRAUD_BLIND_SPOT", "trip_id": "T20", "trip_start_ts": "2026-07-05 13:15:31", 
          "pickup_lat": 39.2904, "pickup_lon": -76.6122, "dropoff_lat": 39.3000, "dropoff_lon": -76.6200,
-         "gps_accuracy_m": 10, "emulator_flag": 0, "gps_mock_flag": 0}
+         "gps_accuracy_m": 10, "emulator_flag": 0, "gps_mock_flag": 0},
+
+        # 8. D_LEAK: Mixed segments. 1 flagged segment and 1 clean segment in Tier 2 band (250 km/h).
+        # Should NOT trigger because device flags are not present on BOTH segments.
+        {"driver_id": "D_LEAK", "trip_id": "T21", "trip_start_ts": "2026-07-05 12:00:00", 
+         "pickup_lat": 40.7128, "pickup_lon": -74.0060, "dropoff_lat": 40.7200, "dropoff_lon": -74.0100,
+         "gps_accuracy_m": 10, "emulator_flag": 1, "gps_mock_flag": 0},
+        {"driver_id": "D_LEAK", "trip_id": "T22", "trip_start_ts": "2026-07-05 12:37:22", 
+         "pickup_lat": 39.9526, "pickup_lon": -75.1652, "dropoff_lat": 39.9600, "dropoff_lon": -75.1700,
+         "gps_accuracy_m": 10, "emulator_flag": 1, "gps_mock_flag": 0}, # Flagged
+        {"driver_id": "D_LEAK", "trip_id": "T23", "trip_start_ts": "2026-07-05 13:15:31", 
+         "pickup_lat": 39.2904, "pickup_lon": -76.6122, "dropoff_lat": 39.3000, "dropoff_lon": -76.6200,
+         "gps_accuracy_m": 10, "emulator_flag": 0, "gps_mock_flag": 0}  # Clean
     ]
     df = pd.DataFrame(trips_data)
     df["trip_start_ts"] = pd.to_datetime(df["trip_start_ts"])
@@ -175,3 +187,9 @@ def test_acknowledged_blind_spot_clean_device_in_tier2_band_evades():
     df = get_mock_trips_df()
     triggered = run_duckdb_signal(df)
     assert "D_FRAUD_BLIND_SPOT" not in triggered
+
+
+def test_leak_mixed_driver():
+    df = get_mock_trips_df()
+    triggered = run_duckdb_signal(df)
+    assert "D_LEAK" not in triggered
