@@ -61,19 +61,53 @@ def _generate_narrative(row, collusion_count) -> str:
 
 
 def _generate_fp_table(osint_package, row) -> str:
-    device_status = "**UNVERIFIED** (SIMULATED — illustrative only)"
-    payout_status = "**UNVERIFIED** (SIMULATED — illustrative only)"
-    gps_status = "**UNVERIFIED** (SIMULATED — illustrative only)"
-    address_status = "**UNVERIFIED** (SIMULATED — illustrative only)"
+    triggered_str = getattr(row, "triggered_signals", "")
+    triggered_set = {s.strip() for s in triggered_str.split(",") if s.strip()}
     
+    fatal_ids = getattr(row, "fatal_signal_ids", "")
+    fatal_set = {s.strip() for s in fatal_ids.split(",") if s.strip()}
+    
+    rows = []
+    
+    if any(s in triggered_set for s in ["03_device_compromise", "06_shared_device", "17_device_hopping"]) or "F02" in fatal_set:
+        rows.append(
+            "| **Family Sharing / Device Upgrade** | Device risk and shared hardware check | **UNVERIFIED** (SIMULATED — illustrative only) | Review active device history logs for driver name hopping |"
+        )
+        
+    if any(s in triggered_set for s in ["07_shared_payout", "19_payout_bank_change"]) or "F03" in fatal_set or int(getattr(row, "payout_change_72h", 0)) > 0:
+        rows.append(
+            "| **Legitimate Payout Mutation** | Bank account tenure check | **UNVERIFIED** (SIMULATED — illustrative only) | Contact driver to confirm bank details change and check signature |"
+        )
+        
+    if any(s in triggered_set for s in ["23_gps_spoofing_impossible_transit", "01_impossible_travel", "02_geofence_miss", "15_trip_distance_anomaly", "16_store_geofence_cluster"]) or "F01" in fatal_set:
+        rows.append(
+            "| **GPS Canyon / Degradation** | GPS accuracy & mock location check | **UNVERIFIED** (SIMULATED — illustrative only) | Verify physical delivery photo metadata and customer delivery receipt |"
+        )
+        
+    if any(s in triggered_set for s in ["08_refund_velocity", "11_transaction_amount_outlier", "25_device_forensics_account_hopping"]):
+        rows.append(
+            "| **Bulk Grocery / Store Mistakes** | Store peer cohort purchase check | **UNVERIFIED** (SIMULATED — illustrative only) | Review items list for corporate purchase markers or system double-charge errors |"
+        )
+        
+    if any(s in triggered_set for s in ["09_incentive_threshold", "12_campaign_concentration_abuse"]):
+        rows.append(
+            "| **Power User Bonus Conversion** | Campaign activity cohort comparison | **UNVERIFIED** (SIMULATED — illustrative only) | Check driver's historical rolling campaign activity to rule out natural hard work |"
+        )
+        
+    if any(s in triggered_set for s in ["10_off_hours_claim", "14_night_activity_shift"]):
+        rows.append(
+            "| **Night-Shift Profile Shift** | Shift preferences and history check | **UNVERIFIED** (SIMULATED — illustrative only) | Review historic trip start hour distributions for seasonal shifts |"
+        )
+        
+    if not rows:
+        rows.append(
+            "| **Baseline Identity Anomaly** | Contractor presence / identity match check | **UNVERIFIED** (SIMULATED — illustrative only) | Verify contractor business registration matches the identity document |"
+        )
+        
     lines = [
         "| Legitimate Behavior | Exclusion Logic / Check | Automated Status (Simulation Mode) | Action Required |",
-        "| :--- | :--- | :--- | :--- |",
-        f"| **Family Sharing Device** | Shared-household / device risk check | {device_status} | Review account log for driver name hopping |",
-        f"| **Legitimate Payout Change** | Bank account tenure check | {payout_status} | Contact driver to confirm bank details change |",
-        f"| **GPS Signal Degradation** | GPS accuracy & mock location check | {gps_status} | Verify physical photo evidence & customer receipt |",
-        f"| **Mule Account Address** | Public records / address verification | {address_status} | Confirm address matches identity doc and bank record |"
-    ]
+        "| :--- | :--- | :--- | :--- |"
+    ] + rows
     return "\n".join(lines)
 
 
