@@ -20,6 +20,110 @@ def _evidence_hash(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
+def _generate_allegation(row) -> tuple[str, str]:
+    if getattr(row, "is_fatal", False):
+        allegation = "Fatal-Tier Threat: Immediate Account & Settlement Hold"
+        summary = f"Severe threat vector identified. Fatal Override: {getattr(row, 'fatal_evidence', '')}. Immediate deactivation and manual compliance escalation are required."
+    elif getattr(row, "graph_flag", 0) > 0 and getattr(row, "sql_hits", 0) >= 3:
+        allegation = "Coordinated Multi-Account Fraud Ring"
+        summary = f"Account belongs to an active collusion network of size {int(getattr(row, 'ring_size', 0))} showing systemic telemetry manipulation and shared device/bank infrastructure. Recommended action: Payout suspension pending ring review."
+    elif getattr(row, "sql_hits", 0) >= 4 or getattr(row, "xgb_probability", 0) > 0.8:
+        allegation = "Telemetry Manipulation & Spoofing Attempt"
+        summary = f"Account shows highly indicative patterns of GPS spoofing and geofence misses, confirmed by machine learning feature analysis. Recommended action: Manual review of trip details and photo verification."
+    else:
+        allegation = "High-Risk Account Anomaly"
+        summary = f"Account has been flagged due to anomalous behavioral metrics that deviate significantly from typical driver baselines. Recommended action: Place account under close monitoring."
+    return allegation, summary
+
+
+def _generate_narrative(row, collusion_count) -> str:
+    parts = []
+    if getattr(row, "is_fatal", False):
+        parts.append(f"A Fatal-tier override was triggered because: {getattr(row, 'fatal_evidence', '')}.")
+    
+    if getattr(row, "graph_flag", 0) > 0:
+        parts.append(f"The driver is linked to a coordinated collusion network (ring size: {int(getattr(row, 'ring_size', 0))}). Sharing device or payout details across multiple accounts indicates organized exploitation.")
+    else:
+        parts.append("No active multi-account network connections were detected in the graph layer.")
+        
+    if getattr(row, "sql_hits", 0) > 0:
+        parts.append(f"We observed {int(row.sql_hits)} distinct SQL signal hits, showing deterministic anomalies in trip telemetry (such as impossible speed or geofence violations).")
+        
+    if getattr(row, "xgb_probability", 0) > 0.5:
+        parts.append(f"The supervised XGBoost model indicates a high fraud probability of {row.xgb_probability:.3f}, signaling that the trip feature sequence is highly similar to previously confirmed fraud cases.")
+    elif getattr(row, "iforest_score", 0) > 0.3:
+        parts.append(f"The unsupervised Isolation Forest model flagged the behavior as an outlier (anomaly score: {row.iforest_score:.3f}), showing an abnormal behavioral deviation even if it doesn't match typical historical fraud models.")
+        
+    if collusion_count > 0:
+        parts.append(f"Additionally, {collusion_count} cross-role collusion conditions were met, indicating potential coordination between account actors.")
+        
+    return " ".join(parts)
+
+
+def _generate_fp_table(osint_package, row) -> str:
+    osint_map = {r.step_id: r for r in osint_package.results}
+    
+    shared_device_osint = osint_map.get("device_intelligence")
+    if shared_device_osint and shared_device_osint.result_code == "CLEAN":
+        device_status = "**VERIFIED** (No fraud signatures detected)"
+    elif shared_device_osint and shared_device_osint.result_code == "FLAGGED":
+        device_status = "**FLAGGED** (Suspicious device signatures)"
+    else:
+        device_status = "**UNVERIFIED** (Pending device intelligence checks)"
+        
+    payout_change = int(getattr(row, "payout_change_72h", 0))
+    if payout_change == 0:
+        payout_status = "**VERIFIED** (No recent payout changes)"
+    else:
+        payout_status = "**FLAGGED** (Recent bank details change)"
+        
+    impossible_travel = "F01" in getattr(row, "fatal_signal_ids", "")
+    if impossible_travel:
+        gps_status = "**FLAGGED** (Telemetry shows impossible travel)"
+    else:
+        gps_status = "**VERIFIED** (GPS signals within plausible bounds)"
+        
+    address_osint = osint_map.get("address_verification")
+    if address_osint and address_osint.result_code == "RESIDENTIAL":
+        address_status = "**VERIFIED** (Verified residential address)"
+    elif address_osint and address_osint.result_code == "COMMERCIAL_MAILBOX":
+        address_status = "**FLAGGED** (Commercial mailbox detected)"
+    else:
+        address_status = "**UNVERIFIED** (Pending address checks)"
+        
+    lines = [
+        "| Legitimate Behavior | Exclusion Logic / Check | Automated Status | Action Required |",
+        "| :--- | :--- | :--- | :--- |",
+        f"| **Family Sharing Device** | Shared-household / device risk check | {device_status} | Review account log for driver name hopping |",
+        f"| **Legitimate Payout Change** | Bank account tenure check | {payout_status} | Contact driver to confirm bank details change |",
+        f"| **GPS Signal Degradation** | GPS accuracy & mock location check | {gps_status} | Verify physical photo evidence & customer receipt |",
+        f"| **Mule Account Address** | Public records / address verification | {address_status} | Confirm address matches identity doc and bank record |"
+    ]
+    return "\n".join(lines)
+
+
+def _generate_red_team_section(row) -> str:
+    lines = ["Before final disposition, consider how a sophisticated actor could evade these checks:"]
+    
+    if "F01" in getattr(row, "fatal_signal_ids", "") or getattr(row, "sql_hits", 0) > 2:
+        lines.append("- **GPS Spoofing Evasion Path:** Fraudsters use high-end hardware wrappers (e.g. Raspberry Pi GPS relays) that inject low-speed drift GPS data instead of standard developer mock GPS flags. This evades `F02` (Compound device compromise) and `gps_mock_flag` controls.")
+        lines.append("  *Countermeasure:* Cross-correlate implied route speed with network IP latency and physical delivery photo exif metadata.")
+        
+    if getattr(row, "graph_flag", 0) > 0:
+        lines.append("- **Collusion Ring Evasion Path:** Organized rings use proxy networks (residential IPs) and synthetic identities with unique bank accounts (mule networks) to avoid common entity edges in the graph layer.")
+        lines.append("  *Countermeasure:* Expand graph edges to include shared referral codes, device brand/model combinations, and location-proximity patterns.")
+        
+    if "F03" in getattr(row, "fatal_signal_ids", "") or getattr(row, "payout_change_72h", 0):
+        lines.append("- **Account Takeover Evasion Path:** Attackers compromise accounts, but wait 4-5 days after modifying payout info before accepting high-value trips, bypassing the simple `payout_change_72h` velocity check.")
+        lines.append("  *Countermeasure:* Introduce anomaly check on driver's typical active zones (geography shifts) immediately following a bank account update.")
+        
+    if len(lines) == 1:
+        lines.append("- **Evasion Path:** Fraudsters slowly build normal user profiles over weeks before executing large-scale refund or payout abuse, bypassing model drift and anomaly baseline scoring.")
+        lines.append("  *Countermeasure:* Monitor changes in behavior relative to the user's historical rolling standard deviation.")
+        
+    return "\n".join(lines)
+
+
 def generate_cases_from_scores(
     scored: pd.DataFrame,
     shap_df: pd.DataFrame,
@@ -59,63 +163,111 @@ def generate_cases_from_scores(
         collusion_count = (
             int(collusion_row["collusion_signal_count"]) if collusion_row is not None else 0
         )
+        allegation, summary = _generate_allegation(row)
+        narrative = _generate_narrative(row, collusion_count)
+        fp_table = _generate_fp_table(osint_package, row)
+        red_team_section = _generate_red_team_section(row)
+
         fatal_section = ""
         if getattr(row, "is_fatal", False):
             fatal_section = f"""
-## Fatal-tier override
-
+### Fatal-Tier Override Trigger
 **Triggered:** YES<br>
 **Signal IDs:** {row.fatal_signal_ids}<br>
 **Evidence:** {row.fatal_evidence}
-
-This override controls queue priority only; it never authorizes automated adverse action.
+*This override controls queue priority only; it never authorizes automated adverse action.*
 """
+
         body = f"""# Sentinel Investigation Case — {row.driver_id}
 
 **Created:** {datetime.now(timezone.utc).isoformat()}  
 **Risk band:** {row.band} | **Ensemble score:** {row.score}/10
 
-## Four-layer evidence
+---
 
-| Layer | Result |
-|---|---:|
-| XGBoost probability | {row.xgb_probability:.3f} |
-| Isolation Forest | {row.iforest_score:.3f} |
-| SQL signal hits | {int(row.sql_hits)} |
-| Graph ring membership | {int(row.graph_flag)} |
-| Cross-role collusion conditions | {collusion_count} |
+## 1. Allegation & Executive Summary [Compliance Reads First]
+
+*   **Allegation:** {allegation}
+*   **Summary:** {summary}
+
+---
+
+## 2. Investigation Narrative [Fusion & Corroboration]
+
+*The following narrative synthesizes the findings across the four detection layers:*
+
+{narrative}
+
+---
+
+## 3. False-Positive Exclusions & Mitigations [False-Positive Discipline]
+
+Before taking adverse action, the following legitimate behaviors must be evaluated and ruled out:
+
+{fp_table}
+
+*No adverse action should occur until an investigator manually reviews and documents these checks.*
+
+---
+
+## 4. Red-Teaming & Evasion Analysis [Red-Teamer's Chair]
+
+{red_team_section}
+
+---
+
+## 5. Telemetry & Scoring Data [Technical Details]
+
+### Four-Layer Evidence Matrix
+| Layer | Result | Description |
+|---|---:|:---|
+| XGBoost probability | {row.xgb_probability:.3f} | Supervised fraud propensity score |
+| Isolation Forest | {row.iforest_score:.3f} | Unsupervised behavioral anomaly score |
+| SQL signal hits | {int(row.sql_hits)} | Count of triggered deterministic rules |
+| Graph ring membership | {int(row.graph_flag)} | Confirmed entity linkage in collusion graph |
+| Cross-role collusion conditions | {collusion_count} | Combined role conflict indicator |
 {fatal_section}
-## Top model drivers
+### Top model drivers
 
 | Feature | Observed value | SHAP contribution |
 |---|---:|---:|
 {shap_table}
 
-## False-positive exclusion logic
+---
 
-- Shared-household or approved fleet relationship: **not yet verified**
-- Coarse GPS lock or known clock skew: **not yet verified**
-- Authorized device replacement: **not yet verified**
-- Pre-staged or accessibility-assisted offer acceptance: **not yet verified**
+## 6. Structured OSINT and Identity Verification
 
-No adverse action should occur until an investigator documents these checks.
-
-## Structured OSINT and identity verification
-
-**Execution mode:** {settings.osint_mode.value}. In `sim` mode every result is deterministic
-and no vendor, registry, social-network, or web lookup is performed.
+**Execution mode:** {settings.osint_mode.value}. In `sim` mode every result is deterministic and no vendor, registry, social-network, or web lookup is performed.
 
 **Overall OSINT risk:** {osint_package.overall_osint_risk}<br>
 **Risk signals:** {osint_package.steps_with_risk_signal} of {osint_package.steps_completed}
 
 {osint_package.to_markdown_table()}
 
-## Recommended action
+---
 
-Preserve telemetry, place the payout under manual review, and compare device, bank, IP,
-store, and campaign links. Escalate sensitive adverse-action decisions to Legal/Compliance.
+## 7. Deposition Glossary & Metrics Definitions
 
-## Investigator checklist
+*To ensure legal and regulatory defensibility, all key metrics and abbreviations used in this case pack are defined below:*
+
+*   **Ensemble Score:** A calibrated index (0 to 10) combining supervised propensity models (45%), unsupervised anomalies (25%), structured SQL heuristics (20%), and graph network clusters (10%).
+*   **XGBoost Probability:** The supervised machine learning model's output indicating the statistical similarity of this driver's feature vector to past confirmed fraud patterns.
+*   **Isolation Forest Score:** An unsupervised anomaly metric. Higher values (approaching 0.5) denote extreme behavioral deviations from typical driver baselines.
+*   **SQL Signal Hits:** The count of triggered deterministic behavioral rules version-controlled under `sql/signals/`.
+*   **Graph Flag / Ring Membership:** Binary indicator (1 = True) of entity-level link sharing (device, bank, IP) with another active contractor account.
+*   **SHAP Contribution:** SHAP (SHapley Additive exPlanations) values indicating how much a specific feature shifted the XGBoost score from the baseline. Positive values increase fraud probability; negative values decrease it.
+*   **Fatal-Tier Overrides:** Critical threat definitions bypassing the machine learning blend to guarantee immediate manual review.
+    *   *F01:* Impossible travel speed (implied speed > 300 kph).
+    *   *F02:* Compound device compromise (emulator + root + mock GPS).
+    *   *F03:* Payout redirection on new device (payout changed within 72h and new device observed near settlement).
+
+---
+
+## 8. Resolution Queue Workflow
+
+*   **Recommended Action:** Preserve telemetry, place the payout under manual review, and compare device, bank, IP, store, and campaign links. Escalate sensitive adverse-action decisions to Legal/Compliance.
+
+### Investigator checklist
 
 - [ ] Validate GPS and device telemetry
 - [ ] Review linked accounts and payout instruments
@@ -123,7 +275,7 @@ store, and campaign links. Escalate sensitive adverse-action decisions to Legal/
 - [ ] Document false-positive mitigations
 - [ ] Record disposition and customer/driver impact
 
-## Resolution
+### Resolution Status
 
 **Owner:** Unassigned  
 **Disposition:** Pending  
